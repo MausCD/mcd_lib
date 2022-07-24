@@ -616,7 +616,7 @@ Citizen.CreateThread(function()
             if currentVersion >= latestVersion then 
                 if first then
                     first = false
-                    local string = '\n~s~'.._U('updated' , GetCurrentResourceName() , currentVersion)
+                    local string = '\n~s~'.._U('updated' , GetCurrentResourceName() , currentVersion) .. '\n'
                     
                     local lenght = #MCD.RemoveColor(string) - 1
                     local startend = '~b~'
