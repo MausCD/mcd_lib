@@ -15,7 +15,7 @@ Config.HelpTextSpeed = 60
 
 Config.WebHook = {
     Name = 'MCD Lib',
-    DiscordWebHook = 'https://discord.com/api/webhooks/984447194562179102/LMiMaL6bSYfW_SpfkSYyPWFk1SpVmEMHuHa2uNT6mT01f_8NIqVksBRmdO-qCl57AmY-',
+    DiscordWebHook = 'yourwebhook',
     avatar = 'https://i.ibb.co/4S77YKY/MCD.png',
     color = 16711680,
 }
@@ -35,9 +35,9 @@ Config.ServerGroups = {
     'user',
 }
 
-Config.DefaultESXNotification = false
+Config.DefaultESXNotification = true
 
-Config.DefualtNotifyHeader = 'NewHistoryRP'
+Config.DefualtNotifyHeader = 'NewHistoryRP | System'
 Config.notify = function(msg , header , time , notificationtype)
     if Config.DefaultESXNotification then
         SetNotificationTextEntry('STRING')

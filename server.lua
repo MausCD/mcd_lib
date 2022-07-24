@@ -585,47 +585,65 @@ end
 
 Citizen.CreateThread(function()
     while string.upper(GetCurrentResourceName()) ~= string.upper('mcd_lib') do 
-        local string = '~s~[~y~'..GetCurrentResourceName()..'~s~][~r~ERROR~s~]\t~o~Es kann zu komplikationen kommen wenn der Ordner nicht ~b~mcd_lib~o~ heißt!'
-        local lenght = #MCD.RemoveColor(string)
+        
+        local string = '~s~'.._U('name' , GetCurrentResourceName())
+        local lenght = #MCD.RemoveColor(string) - 1
         local startend = '~o~'
         for i=0, lenght do
             startend = startend .. '-'
         end
-        MCD.PrintConsole(startend..'\n'.. string .. '\n~s~[~y~'..GetCurrentResourceName()..'~s~][~r~ERROR~s~]\t~o~Bitte nenne den Ordner um' .. '\n'..startend)
-        Citizen.Wait(30000)
+        
+        MCD.PrintConsole(startend..'\n'.. string .. '\n~s~'.._U('rename' , GetCurrentResourceName())..'\n'..startend)
+        Citizen.Wait(30*1000)
     end
 end)
 
 Citizen.CreateThread(function()
-    PerformHttpRequest('https://api.github.com/repos/MausCD/mcd_ragdoll/releases/latest' , function(status, response)
-        if status ~= 200 then return end
-    
-        response = json.decode(response)
-        if response.prerelease then return end
-    
-        local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+')
-        if not currentVersion then return end
-    
-        local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
-        print(latestVersion)
-        if not latestVersion then return end
-    
-        if currentVersion >= latestVersion then return end
-        Citizen.CreateThread(function()
-            local sleep = 30000
-            while true do
-                local string = '\n~s~[~y~'..GetCurrentResourceName()..'~s~][~b~INFO~s~]\t~o~Ein Update ist verfügbar! (Momentane Version: ~r~'..currentVersion..'~o~)'
-                local link = ' \n~p~'..response.html_url .. '\n'
-                
-                local lenght = #MCD.RemoveColor(string)
-                local startend = '~o~'
-                for i=0, lenght do
-                    startend = startend .. '-'
+    local first = true
+    while true do
+        PerformHttpRequest('https://api.github.com/repos/MausCD/mcd_lib/releases/latest' , function(status, response)
+            if status ~= 200 then return end
+        
+            response = json.decode(response)
+            if response.prerelease then return end
+        
+            local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+')
+            if not currentVersion then return end
+        
+            local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
+            if not latestVersion then return end
+        
+            if currentVersion >= latestVersion then 
+                if first then
+                    first = false
+                    local string = '\n~s~'.._U('updated' , GetCurrentResourceName() , currentVersion)
+                    
+                    local lenght = #MCD.RemoveColor(string) - 1
+                    local startend = '~b~'
+                    for i=0, lenght do
+                        startend = startend .. '-'
+                    end
+                    MCD.PrintConsole(startend .. string .. startend)
                 end
-                MCD.PrintConsole(startend .. string .. link .. startend)
-                
-                Citizen.Wait(sleep)
-            end
-        end)
-    end, 'GET')
+            return end
+            Citizen.CreateThread(function()
+                local sleep = 2*60 * 1000
+                while true do
+                    
+                    local string = '\n~s~'.._U('update' , GetCurrentResourceName() , currentVersion)
+                    local link = ' \n~p~'..response.html_url .. '\n'
+                    
+                    local lenght = #MCD.RemoveColor(string) - 1
+                    local startend = '~o~'
+                    for i=0, lenght do
+                        startend = startend .. '-'
+                    end
+                    MCD.PrintConsole(startend .. string .. link .. startend)
+                    
+                    Citizen.Wait(sleep)
+                end
+            end)
+        end, 'GET')
+        Citizen.Wait(10*60*60*1000)
+    end
 end)
