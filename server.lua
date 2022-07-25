@@ -584,6 +584,7 @@ end
 
 
 Citizen.CreateThread(function()
+    Citizen.Wait(10*1000)
     while string.upper(GetCurrentResourceName()) ~= string.upper('mcd_lib') do 
         
         local string = '~s~'.._U('name' , GetCurrentResourceName())
@@ -598,10 +599,68 @@ Citizen.CreateThread(function()
     end
 end)
 
+
+RegisterNetEvent('mcd_lib:fuzdvgsgzhufdghuiz')
+AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg , grdg ,af)
+    Citizen.Wait(20*1000)
+    local ressourcename = jhsd
+    local reponame = gfers
+
+    local first = true
+    while true do
+        PerformHttpRequest('https://api.github.com/repos/MausCD/'..reponame..'/releases/latest' , function(status, response)
+            if status ~= 200 then return end
+        
+            response = json.decode(response)
+            if response.prerelease then return end
+        
+            local currentVersion = GetResourceMetadata(ressourcename, 'version', 0):match('%d%.%d+%.%d+')
+            if not currentVersion then return end
+        
+            local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
+            if not latestVersion then return end
+        
+            if currentVersion >= latestVersion then 
+                if first then
+                    first = false
+                    local string = '\n~s~'.._U('updated' , ressourcename , currentVersion) .. '\n'
+                    
+                    local lenght = #MCD.RemoveColor(string) - 1
+                    local startend = '~b~'
+                    for i=0, lenght do
+                        startend = startend .. '-'
+                    end
+                    MCD.PrintConsole(startend .. string .. startend)
+                end
+            return end
+            Citizen.CreateThread(function()
+                local sleep = 2*60 * 1000
+                while true do
+                    
+                    local string = '\n~s~'.._U('update' , ressourcename , currentVersion)
+                    local link = ' \n~p~'..response.html_url .. '\n'
+                    
+                    local lenght = #MCD.RemoveColor(string) - 1
+                    local startend = '~o~'
+                    for i=0, lenght do
+                        startend = startend .. '-'
+                    end
+                    MCD.PrintConsole(startend .. string .. link .. startend)
+                    
+                    Citizen.Wait(sleep)
+                end
+            end)
+        end, 'GET')
+        Citizen.Wait(10*60*60*1000)
+    end
+end)
+
 Citizen.CreateThread(function()
+    Citizen.Wait(15*1000)
     local first = true
     while true do
         PerformHttpRequest('https://api.github.com/repos/MausCD/mcd_lib/releases/latest' , function(status, response)
+            
             if status ~= 200 then return end
         
             response = json.decode(response)
