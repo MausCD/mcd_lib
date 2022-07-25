@@ -31,7 +31,7 @@ MCD.SendToDiscord = function(Text , ressourcename)
     if ressourcename == nil then
         ressourcename = 'nil'
     end
-    Text = '[~y~'..ressourcename..'~s~]'_U('info')'\t'..Text
+    Text = '[~y~'..ressourcename..'~s~]'.._U('info')..'\t'..Text
 
     if Config.PrintDiscord then
         MCD.PrintConsole(Text)
@@ -54,7 +54,7 @@ MCD.STDiscord = function(Text , DiscordWebHook , color , Name, avatar, ressource
     if ressourcename == nil then
         ressourcename = 'nil'
     end
-    Text = '[~y~'..ressourcename..'~s~]'_U('info')'\t'..Text
+    Text = '[~y~'..ressourcename..'~s~]'.._U('info')..'\t'..Text
 
     if Config.PrintDiscord then
         MCD.PrintConsole(Text)
@@ -599,10 +599,11 @@ Citizen.CreateThread(function()
     end
 end)
 
-
+local versions = {
+    ['mcd_lib'] = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+'),
+}
 RegisterNetEvent('mcd_lib:fuzdvgsgzhufdghuiz')
 AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg , grdg ,af)
-    Citizen.Wait(20*1000)
     local ressourcename = jhsd
     local reponame = gfers
 
@@ -615,11 +616,21 @@ AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg 
             if response.prerelease then return end
         
             local currentVersion = GetResourceMetadata(ressourcename, 'version', 0):match('%d%.%d+%.%d+')
+            local found = false
+            for name,ver in pairs(versions) do
+                if name == reponame then
+                    found = true
+                end
+            end
+            if not found then
+                versions[reponame] = currentVersion
+            end
             if not currentVersion then return end
         
             local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
             if not latestVersion then return end
         
+            Citizen.Wait(20*1000)
             if currentVersion >= latestVersion then 
                 if first then
                     first = false
@@ -706,3 +717,9 @@ Citizen.CreateThread(function()
         Citizen.Wait(10*60*60*1000)
     end
 end)
+
+RegisterCommand('mcd_version', function()
+    for name,ver in pairs(versions) do
+        print('^0[^3'..name..'^0] Version: ' .. ver)
+    end
+end, false)
