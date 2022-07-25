@@ -608,6 +608,7 @@ AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg 
     local reponame = gfers
 
     local first = true
+    local sleep = 10*60*60*1000
     while true do
         PerformHttpRequest('https://api.github.com/repos/MausCD/'..reponame..'/releases/latest' , function(status, response)
             if status ~= 200 then return end
@@ -644,31 +645,26 @@ AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg 
                     MCD.PrintConsole(startend .. string .. startend)
                 end
             return end
-            Citizen.CreateThread(function()
-                local sleep = 2*60 * 1000
-                while true do
+            sleep = 2*60 * 1000
                     
-                    local string = '\n~s~'.._U('update' , ressourcename , currentVersion)
-                    local link = ' \n~p~'..response.html_url .. '\n'
-                    
-                    local lenght = #MCD.RemoveColor(string) - 1
-                    local startend = '~o~'
-                    for i=0, lenght do
-                        startend = startend .. '-'
-                    end
-                    MCD.PrintConsole(startend .. string .. link .. startend)
-                    
-                    Citizen.Wait(sleep)
-                end
-            end)
+            local string = '\n~s~'.._U('update' , ressourcename , currentVersion)
+            local link = ' \n~p~'..response.html_url .. '\n'
+            
+            local lenght = #MCD.RemoveColor(string) - 1
+            local startend = '~o~'
+            for i=0, lenght do
+                startend = startend .. '-'
+            end
+            MCD.PrintConsole(startend .. string .. link .. startend)
         end, 'GET')
-        Citizen.Wait(10*60*60*1000)
+        Citizen.Wait(sleep)
     end
 end)
 
 Citizen.CreateThread(function()
     Citizen.Wait(15*1000)
     local first = true
+    local sleep = 10*60*60*1000
     while true do
         PerformHttpRequest('https://api.github.com/repos/MausCD/mcd_lib/releases/latest' , function(status, response)
             
@@ -696,25 +692,20 @@ Citizen.CreateThread(function()
                     MCD.PrintConsole(startend .. string .. startend)
                 end
             return end
-            Citizen.CreateThread(function()
-                local sleep = 2*60 * 1000
-                while true do
+            sleep = 2*60 * 1000
                     
-                    local string = '\n~s~'.._U('update' , GetCurrentResourceName() , currentVersion)
-                    local link = ' \n~p~'..response.html_url .. '\n'
-                    
-                    local lenght = #MCD.RemoveColor(string) - 1
-                    local startend = '~o~'
-                    for i=0, lenght do
-                        startend = startend .. '-'
-                    end
-                    MCD.PrintConsole(startend .. string .. link .. startend)
-                    
-                    Citizen.Wait(sleep)
-                end
-            end)
+            local string = '\n~s~'.._U('update' , GetCurrentResourceName() , currentVersion)
+            local link = ' \n~p~'..response.html_url .. '\n'
+            
+            local lenght = #MCD.RemoveColor(string) - 1
+            local startend = '~o~'
+            for i=0, lenght do
+                startend = startend .. '-'
+            end
+            MCD.PrintConsole(startend .. string .. link .. startend)
+
         end, 'GET')
-        Citizen.Wait(10*60*60*1000)
+        Citizen.Wait(sleep)
     end
 end)
 

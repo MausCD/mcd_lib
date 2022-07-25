@@ -2,7 +2,7 @@ fx_version 'bodacious'
 game 'gta5'
 author 'MausCD'
 description 'MCD Libary'
-version '1.0.3'
+version '1.0.4'
 
 shared_script '@es_extended/imports.lua'
 
