@@ -20,7 +20,8 @@ Locales['de'] = {
 	['setjob'] = 'Job von ~y~%s~s~ auf ~g~%s~s~ gesetzt. (ServerId: ~b~%s~s~).',	
 	
 	
-	['error'] = '[~o~ERROR~s~]\t',	
+	['error'] = '~s~[~o~ERROR~s~]\t',	
+	['info'] = '~s~[~b~INFO~s~]\t',	
 
 	['error_remmoney'] = ' ~y~%s~s~ benutz ~b~RemoveMoney~s~ ~o~falsch~s~ es wurde ~r~kein Konto~s~ angegeben von dem ~g~Geld Entfernt~s~ werden soll. ~p~Standartmäßig auf "money" gestellt',	
 	['error_remmoney2'] = '~y~%s~s~ benutz ~b~RemoveMoney~s~ ~o~falsch~s~ es wurde ~r~kein Betrag~s~ angegeben der ~g~Entfernt~s~ werden soll. ~p~Standartmäßig auf 0 gestellt',	

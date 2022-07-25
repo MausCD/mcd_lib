@@ -31,7 +31,7 @@ MCD.SendToDiscord = function(Text , ressourcename)
     if ressourcename == nil then
         ressourcename = 'nil'
     end
-    Text = '[~y~'..ressourcename..'~s~]\t'..Text
+    Text = '[~y~'..ressourcename..'~s~]'_U('info')'\t'..Text
 
     if Config.PrintDiscord then
         MCD.PrintConsole(Text)
@@ -54,7 +54,7 @@ MCD.STDiscord = function(Text , DiscordWebHook , color , Name, avatar, ressource
     if ressourcename == nil then
         ressourcename = 'nil'
     end
-    Text = '[~y~'..ressourcename..'~s~]\t'..Text
+    Text = '[~y~'..ressourcename..'~s~]'_U('info')'\t'..Text
 
     if Config.PrintDiscord then
         MCD.PrintConsole(Text)
