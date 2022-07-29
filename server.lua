@@ -598,114 +598,82 @@ Citizen.CreateThread(function()
         Citizen.Wait(30*1000)
     end
 end)
-
+--------------------------------------------------------------------------------------------------------
 local versions = {
     ['mcd_lib'] = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+'),
 }
+
+local checker = {}
 RegisterNetEvent('mcd_lib:fuzdvgsgzhufdghuiz')
 AddEventHandler('mcd_lib:fuzdvgsgzhufdghuiz', function(jhsd  , gfers , gr , rdg , grdg ,af)
     local ressourcename = jhsd
     local reponame = gfers
-
-    local first = true
-    local sleep = 10*60*60*1000
-    while true do
-        PerformHttpRequest('https://api.github.com/repos/MausCD/'..reponame..'/releases/latest' , function(status, response)
-            if status ~= 200 then return end
-        
-            response = json.decode(response)
-            if response.prerelease then return end
-        
-            local currentVersion = GetResourceMetadata(ressourcename, 'version', 0):match('%d%.%d+%.%d+')
-            local found = false
-            for name,ver in pairs(versions) do
-                if name == reponame then
-                    found = true
-                end
-            end
-            if not found then
-                versions[reponame] = currentVersion
-            end
-            if not currentVersion then return end
-        
-            local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
-            if not latestVersion then return end
-        
-            Citizen.Wait(20*1000)
-            if currentVersion >= latestVersion then 
-                if first then
-                    first = false
-                    local string = '\n~s~'.._U('updated' , ressourcename , currentVersion) .. '\n'
-                    
-                    local lenght = #MCD.RemoveColor(string) - 1
-                    local startend = '~b~'
-                    for i=0, lenght do
-                        startend = startend .. '-'
-                    end
-                    MCD.PrintConsole(startend .. string .. startend)
-                end
-            return end
-            sleep = 2*60 * 1000
-                    
-            local string = '\n~s~'.._U('update' , ressourcename , currentVersion)
-            local link = ' \n~p~'..response.html_url .. '\n'
-            
-            local lenght = #MCD.RemoveColor(string) - 1
-            local startend = '~o~'
-            for i=0, lenght do
-                startend = startend .. '-'
-            end
-            MCD.PrintConsole(startend .. string .. link .. startend)
-        end, 'GET')
-        Citizen.Wait(sleep)
-    end
+    
+    Citizen.Wait(20*1000)
+    table.insert(checker , {repo = reponame , ressourcename = ressourcename})
+    VersionState(ressourcename , reponame , true)
 end)
 
-Citizen.CreateThread(function()
-    Citizen.Wait(15*1000)
-    local first = true
-    local sleep = 10*60*60*1000
-    while true do
-        PerformHttpRequest('https://api.github.com/repos/MausCD/mcd_lib/releases/latest' , function(status, response)
-            
-            if status ~= 200 then return end
-        
-            response = json.decode(response)
-            if response.prerelease then return end
-        
-            local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+')
-            if not currentVersion then return end
-        
-            local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
-            if not latestVersion then return end
-        
-            if currentVersion >= latestVersion then 
-                if first then
-                    first = false
-                    local string = '\n~s~'.._U('updated' , GetCurrentResourceName() , currentVersion) .. '\n'
-                    
-                    local lenght = #MCD.RemoveColor(string) - 1
-                    local startend = '~b~'
-                    for i=0, lenght do
-                        startend = startend .. '-'
-                    end
-                    MCD.PrintConsole(startend .. string .. startend)
-                end
-            return end
-            sleep = 2*60 * 1000
-                    
-            local string = '\n~s~'.._U('update' , GetCurrentResourceName() , currentVersion)
-            local link = ' \n~p~'..response.html_url .. '\n'
-            
-            local lenght = #MCD.RemoveColor(string) - 1
-            local startend = '~o~'
-            for i=0, lenght do
-                startend = startend .. '-'
+function VersionState(ressourcename , reponame , first)
+    PerformHttpRequest('https://api.github.com/repos/MausCD/'..reponame..'/releases/latest' , function(status, response)
+        if status == 403 then
+            MCD.PrintConsole('[~y~'.. GetCurrentResourceName() ..'~s~][~r~ERROR~s~]\t~o~ ❌❌❌API rate limit exceeded❌❌❌ ~s~(~b~https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting~s~)')
+        end
+        if status ~= 200 then return end
+    
+        response = json.decode(response)
+        if response.prerelease then return end
+    
+        local currentVersion = GetResourceMetadata(ressourcename, 'version', 0):match('%d%.%d+%.%d+')
+        local found = false
+        for name,ver in pairs(versions) do
+            if name == reponame then
+                found = true
             end
-            MCD.PrintConsole(startend .. string .. link .. startend)
+        end
+        if not found then
+            versions[reponame] = currentVersion
+        end
+        if not currentVersion then return end
+    
+        local latestVersion = response.tag_name:match('%d%.%d+%.%d+')
+        if not latestVersion then return end
 
-        end, 'GET')
-        Citizen.Wait(sleep)
+        if currentVersion >= latestVersion then 
+            if first then
+                local string = '\n~s~'.._U('updated' , ressourcename , currentVersion) .. '\n'
+                
+                local lenght = #MCD.RemoveColor(string) - 1
+                local startend = '~b~'
+                for i=0, lenght do
+                    startend = startend .. '-'
+                end
+                MCD.PrintConsole(startend .. string .. startend)
+            end
+        return end
+                
+        local string = '\n~s~'.._U('update' , ressourcename , currentVersion)
+        local link = ' \n~p~'..response.html_url .. '\n'
+        
+        local lenght = #MCD.RemoveColor(string) - 1
+        local startend = '~o~'
+        for i=0, lenght do
+            startend = startend .. '-'
+        end
+        MCD.PrintConsole(startend .. string .. link .. startend)
+    end, 'GET')
+end
+
+Citizen.CreateThread(function()
+    Citizen.Wait(1*1000)
+    table.insert(checker , {repo = 'mcd_lib' , ressourcename = GetCurrentResourceName()})
+    VersionState(GetCurrentResourceName() ,  'mcd_lib' , true)
+
+    while true do
+        Citizen.Wait(60 * 60 * 1000)
+        for i,p in ipairs(checker) do
+            VersionState(p.ressourcename , p.repo , false)
+        end
     end
 end)
 
@@ -714,3 +682,7 @@ RegisterCommand('mcd_version', function()
         print('^0[^3'..name..'^0] Version: ' .. ver)
     end
 end, false)
+
+MCD.GetPlayerName = function(playersrc)
+    return MCD.RemoveColor(GetPlayerName(playersrc))
+end

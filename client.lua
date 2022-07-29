@@ -677,26 +677,51 @@ MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconTy
     TriggerServerEvent('mcd_lib:jsdhgfvjhkhjbdvsjbkhd', nil , nil , data)
 end
 
+
+MCD.SendAdvancedNotify = function(msg , header , textureDict , iconType , flash , saveToBrief , hudColorIndex)
+    local data = {
+        job = nil,
+        msg = msg,
+        header = header,
+        textureDict = textureDict,
+        iconType = iconType,
+        flash = flash,
+        saveToBrief = saveToBrief,
+        hudColorIndex = hudColorIndex,
+        simplefy = false,
+    }
+    TriggerServerEvent('mcd_lib:jsdhgfvjhkhjbdvsjbkhd', nil , nil , data)
+end
+
 RegisterNetEvent('mcd_lib:knljbfdknljb')
 AddEventHandler('mcd_lib:knljbfdknljb', function(shjjadfv , hshrdgvcb ,dvbc, sdjhgfvc , fhgdeav , fsvgdcv , hegafd , awfdcsaf)
     local data = sdjhgfvc
     local hasjob = false
-    if type(data.job) == 'string' then
-        hasjob = MCD.HasJob(data.job)
-    else
-        for i,jobname in ipairs(data.job) do
-            if not hasjob then
-                if MCD.HasJob(jobname) then
-                    hasjob = true
+    if data.job then
+        if type(data.job) == 'string' then
+            hasjob = MCD.HasJob(data.job)
+        else
+            for i,jobname in ipairs(data.job) do
+                if not hasjob then
+                    if MCD.HasJob(jobname) then
+                        hasjob = true
+                    end
                 end
             end
         end
+    else
+        hasjob = true
     end
     if hasjob then
         if data.simplefy then
             MCD.Notify(data.msg , data.header , data.time , data.notifytype)
         else
-            ESX.ShowAdvancedNotification(data.header, '', data.msg, data.textureDict , data.iconType , data.flash , data.saveToBrief , data.hudColorIndex)
+            if data.saveToBrief == nil then data.saveToBrief = true end
+	        AddTextEntry('MCD_LIB_AdvancedNotification', data.msg)
+	        BeginTextCommandThefeedPost('MCD_LIB_AdvancedNotification')
+            if hudColorIndex then ThefeedNextPostBackgroundColor(data.hudColorIndex) end
+	        EndTextCommandThefeedPostMessagetext(data.textureDict, data.textureDict, false, data.iconType, data.header, '')
+	        EndTextCommandThefeedPostTicker(data.flash or false, data.saveToBrief)
         end
     end
 end)
