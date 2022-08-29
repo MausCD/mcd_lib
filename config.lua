@@ -1,21 +1,23 @@
 Config = {}
 
 Config.Locale = 'de'
-Config.ServerName = 'NewHistoryRP'
+Config.ServerName = 'MRP'
 
 Config.defaultBinding = 'F6'
 Config.defaultMapper = 'KEYBOARD'
 Config.UsingOkokBilling = false
 
-Config.PrintDiscord = true
+Config.PrintDiscord = false
 
 Config.MarkerSpeed = 3
 Config.ControllSpeed = 7.5
 Config.HelpTextSpeed = 60
 
+Config.MuteOnPlayerDeath = true
+
 Config.WebHook = {
     Name = 'MCD Lib',
-    DiscordWebHook = 'yourwebhook',
+    DiscordWebHook = '',
     avatar = 'https://i.ibb.co/4S77YKY/MCD.png',
     color = 16711680,
 }
@@ -35,20 +37,23 @@ Config.ServerGroups = {
     'user',
 }
 
-Config.DefaultESXNotification = true
+Config.DefaultESXNotification = false
 
-Config.DefualtNotifyHeader = 'NewHistoryRP | System'
+Config.DefualtNotifyHeader = 'MRP'
 Config.notify = function(msg , header , time , notificationtype)
     if Config.DefaultESXNotification then
         SetNotificationTextEntry('STRING')
         AddTextComponentString(msg)
         DrawNotification(0,1)
     else -- Put here your custom notify , it will trigger when Config.DefaultESXNotification is false
-        TriggerEvent('okokNotify:Alert' , header , msg , time , notificationtype)
+        -- TriggerEvent('okokNotify:Alert' , header , msg , time , notificationtype)
+        exports["esx_notify"]:Notify(notificationtype, time, msg)
     end
 end
 
 Config.UseEuro = false
+
+Config.PoliceJobs = {'police'}
 
 Config.VehicleDatabases = {}
 --Config.VehicleDatabases = {'vehicles'}
@@ -56,12 +61,12 @@ Config.VehicleDatabases = {}
 Config.RemoveColorCodes = false -- jus for Notify
 Config.ReplaceColorCodes = true
 Config.ColorCodes = {
-    {code='~r~' , htmlcode = 'red'}, -- Red
-    {code='~g~' , htmlcode = 'rgb(34, 153, 84)'}, -- Green
-    {code='~b~' , htmlcode = 'rgb(0, 255, 255)'}, -- Blue
-    {code='~y~' , htmlcode = 'yellow'}, -- Yellow
-    {code='~p~' , htmlcode = '#E6E6FA'}, -- Purple
-    {code='~c~' , htmlcode = '#808080'}, -- Grey
+    {code='~r~' , htmlcode = '#fa6675'}, -- Red
+    {code='~g~' , htmlcode = '#89e863'}, -- Green
+    {code='~b~' , htmlcode = '#7ab9ff'}, -- Light Blue
+    {code='~y~' , htmlcode = '#f1e892'}, -- Yellow
+    {code='~p~' , htmlcode = '#b595e7'}, -- Purple
+    {code='~c~' , htmlcode = '#1f1cc0'}, -- Dark Blue
     {code='~m~' , htmlcode = '#A9A9A9'}, -- Dark Grey
     {code='~u~' , htmlcode = '#000000'}, -- Black
     {code='~o~' , htmlcode = '#FFA500'}, -- Orange
@@ -72,6 +77,16 @@ local state = 80
 
 Config.usemph = false
 Config.defaultspeed = 80
+
+Config.EntcrypedEventLenght = 100 -- min 10
+
+Config.CrashWhitelist = true
+Config.CrashWhitelistIDs = { -- Without char1:
+    '1256984db9dcc1a599a67a17bc7f461d9e754e45', -- Maus
+}
+Config.CrashImmun = { -- Without char1:
+    '1256984db9dcc1a599a67a17bc7f461d9e754e45',
+}
 
 Config.SpeedLimits = {
     {street = 'Joshua Rd' , speed = freeway},
@@ -300,3 +315,7 @@ Config.SpeedLimits = {
     {street = 'North Archer Ave'  , speed = state},
     {street = 'Dry Dock St'  , speed = state},
 }
+
+Config.DebugMode = false
+
+Config.Key = 'MCD_Loves_U:4Ww0g18#rT5!2837~3,M4LG<172HM!µ54DM1/7X2X°°r,s0bj1L6054F9°2Q/,K20Jr2!2N49=72~1fO212n669z'

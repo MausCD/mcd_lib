@@ -2,7 +2,9 @@ fx_version 'bodacious'
 game 'gta5'
 author 'MausCD'
 description 'MCD Libary'
-version '1.0.4'
+version '1.0.6'
+
+lua54 'yes'
 
 shared_script '@es_extended/imports.lua'
 
@@ -23,7 +25,13 @@ server_scripts {
 
 files {
 	'import.lua',
-    'ui.html'
+    'ui.html',
+	'imgs/*.png'
 }
 
 ui_page('ui.html')
+
+escrow_ignore {
+	'config.lua',
+	'locales/*.lua',
+}

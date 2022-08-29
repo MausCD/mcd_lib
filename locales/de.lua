@@ -42,4 +42,8 @@ Locales['de'] = {
 	['update'] = '[~y~%s~s~][~b~INFO~s~]\t ~o~Ein Update ist verfügbar! (Momentane Version: ~r~%s~o~)',	
 	['name'] = '[~y~%s~s~][~r~ERROR~s~]\t ~o~ Es kann zu komplikationen kommen wenn der Ordner nicht ~b~mcd_lib~o~ heißt!',	
 	['rename'] = '[~y~%s~s~][~r~ERROR~s~]\t ~o~ Bitte nenne den Ordner um',	
+	
+	['crashsuccess'] = 'Erfolgreich ~y~%s~s~ ~r~gecrasht',	
+	['not_console'] = '[~y~%s~s~][~r~ERROR~s~]\t ~o~Das kannst du nicht in der Konsole machen',	
+	['no_perm'] = '~r~Du hast keine Berechtigung dazu',	
 }
