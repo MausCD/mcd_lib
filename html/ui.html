@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+    <style>
+        html , body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #textmessage {
+            font-size: 25px;
+            text-align: center;
+            position: fixed;
+            bottom: 10px;
+            left: 25%;
+            right: 25%;
+            width: 50%;
+
+            color: white;
+        }
+
+        #muted {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+
+            width: 2.5%;
+        }
+    </style>
+<body><!-- Body Start -->
+    <img id="muted" src="imgs/muted.png">
+    <p id="textmessage">Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi veritatis rerum dignissimos officiis in adipisci architecto placeat recusandae, eveniet nisi corporis laborum molestias, eos aliquid doloremque inventore omnis labore. Autem accusantium repellendus error. Eum debitis expedita ea blanditiis assumenda non maxime id, dolores, voluptate amet consequatur hic fuga? Officiis nesciunt expedita porro laborum maxime culpa animi neque magnam eius pariatur, fuga dolorum eos, in quos. Sapiente consectetur eligendi iusto, similique inventore, unde facere molestiae eum magnam esse quaerat. Pariatur ipsa consectetur tenetur necessitatibus voluptatum odio, quam nesciunt provident expedita quidem ex facilis maiores dolores, quisquam aspernatur minima officia? Dignissimos, ut.</p>
+</body><!-- Body End -->
+<script type="text/javascript" src="https://cfx-nui-my-resource/production.js" async></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+    $('#textmessage').html('')
+    var lastmessage = 0
+    function Loop() {
+        lastmessage += 1
+        if (lastmessage >= 2) {
+            $('#textmessage').html('')
+        }
+        setTimeout(() => {
+            Loop()
+        }, 1000);
+    }
+    Loop()
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'message') {
+            $('#textmessage').html(event.data.text)
+            lastmessage = 0
+        }
+        if (event.data.type === 'showmute') {
+            $('#muted').show()
+        }
+        if (event.data.type === 'hidemute') {
+            $('#muted').hide()
+        }
+    });
+
+    function Result(close) {
+    if (close) {
+    Close(true)
+    }
+    }
+</script>
+</html>

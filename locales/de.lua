@@ -46,4 +46,18 @@ Locales['de'] = {
 	['crashsuccess'] = 'Erfolgreich ~y~%s~s~ ~r~gecrasht',	
 	['not_console'] = '[~y~%s~s~][~r~ERROR~s~]\t ~o~Das kannst du nicht in der Konsole machen',	
 	['no_perm'] = '~r~Du hast keine Berechtigung dazu',	
+
+	-- Webhook
+	['Webhook_money_add'] = '+ %s$ wurden %s hinzugefügt (%s)'
+	['Webhook_money_remove'] = '- %s$ wurden %s entfernt (%s)'
+	
+	['Webhook_license_add'] = '+ Lizens %s wurden %s hinzugefügt (%s)'
+	['Webhook_license_remove'] = '- Lizens %s$ wurden %s entfernt (%s)'
+	
+	['Webhook_item_add'] = '+ %sx %s wurden %s hinzugefügt (%s)'
+	['Webhook_item_remove'] = '- %sx %s wurden %s entfernt (%s)'
+
+	['Webhook_mute'] = 'Mute Status von %s geändert auf: %s (%s)'
+
+	
 }
