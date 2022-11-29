@@ -17,3 +17,8 @@ end
 MCD.Math.Dist = function(c1 , c2 , md)
     return #(c1 - c2) <= md
 end
+
+MCD.Math.MDist = function(c1 , c2 , md)
+    if md < 0.5 then md = 0.5 end
+    return #(c1 - c2) <= md
+end

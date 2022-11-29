@@ -1,7 +1,9 @@
 Config = {}
 
-Config.Locale = 'de'
+Config.Locale = 'en'
 Config.ServerName = 'MRP'
+
+Config.ServerLogo = 'link'
 
 Config.defaultBinding = 'F6'
 Config.defaultMapper = 'KEYBOARD'
@@ -13,14 +15,29 @@ Config.MarkerSpeed = 3
 Config.ControllSpeed = 7.5
 Config.HelpTextSpeed = 60
 
+Config.ControlHeld = 300
+
 Config.MuteOnPlayerDeath = true
+Config.NoAirControle = true
+Config.NoVehicleRolleOver = true
+Config.DisableAfkCam = true
+Config.AFKKick = 60
+
+Config.NPCs = {
+    parking = 0.8,
+    driving = 0.8,
+    walking = 0.8,
+    randomvehicles = false, -- Garbage Truck , Police , Amublance ...
+    dispatch = false,
+}
 
 -- From Highest to lowest
 Config.ServerGroups = {
     'inhaber',
     'projektleitung',
-    'developer',
+    'entwicklungsleiter',
     'superadministrator',
+    'developer',
     'teamleitung',
     'administrator',
     'fraktionsverwaltung',
@@ -29,6 +46,12 @@ Config.ServerGroups = {
     'testmoderator',
     'user',
 }
+
+Config.UnbanPermission = 'testmoderator'
+Config.AllowConsole = true
+
+Config.AutoBanAfterKicks = 0 -- 0 to disable
+Config.AutoBanDuration = 2*60 -- in min | 0 for permanent
 
 Config.DefaultESXNotification = false
 
@@ -54,12 +77,17 @@ Config.EntcrypedEventLenght = 100 -- min 10
 
 Config.CrashWhitelist = true
 Config.CrashWhitelistIDs = { -- Without char1:
-    '1256984db9dcc1a599a67a17bc7f461d9e754e45', -- Maus
 }
 Config.CrashImmun = { -- Without char1:
-    '1256984db9dcc1a599a67a17bc7f461d9e754e45',
 }
 
+Config.SudoCommand = {
+    allow = true,
+    console = true,
+    group = 'developer'
+}
+
+Config.UpdateMsg = true
 Config.DebugMode = false
 
-Config.Key = 'MCD_Loves_U:4Ww0g18#rT5!2837~3,M4LG<172HM!µ54DM1/7X2X°°r,s0bj1L6054F9°2Q/,K20Jr2!2N49=72~1fO212n669z'
+Config.Key = 'MCD_Loves_U:1r2/60µs3qh04°uz0aWP2L4D8_0_027Z!2336_§pd439#891;36qP135c>503b45l44v493x6N27<GfN9!811751'

@@ -1,12 +1,3 @@
-MCD = {}
-AddEventHandler('mcd_lib:getSharedObject', function(cb)
-	cb(MCD)
-end)
-
-exports('getSharedObject', function()
-	return MCD
-end)
-
 local Cache = {}
 
 MCD.Event = function(eventname)
@@ -26,26 +17,33 @@ MCD.Event = function(eventname)
     return ret
 end
 
-function OldFunction()
-    MCD.Function.ConvertPrint('~s~[~y~mcd_lib~s~]~o~A File Uses an Outdated function please Update your Scripts~s~' , false)
+function OldFunction(OldFunction)
+    if Config.UpdateMsg then
+        print(MCD.Function.ConvertPrint('~s~[~y~mcd_lib~s~]~o~A File Uses an Outdated function (~y~'..OldFunction..'()~o~) please Update your Scripts~s~' , false))
+    end
 end
 
 MCD.GetTimeDifference = function(t1 , t2)
-    OldFunction()
+    OldFunction('GetTimeDifference')
     return MCD.Math.TimeDifference(t1 , t2)
 end
 
 MCD.RemoveColor = function(text)
-    OldFunction()
-    return MCD.Function.RemoveString(text)
+    OldFunction('RemoveColor')
+    return MCD.Function.RemoveColors(text)
 end
 
 MCD.ConvertColor = function(text)
-    OldFunction()
+    OldFunction('ConvertColor')
     return MCD.Function.ConvertColor(text)
 end
- 
+
 MCD.DawMarker = function(type , coords , height , width , color , bobUpAndDown , faceCamera)
+    OldFunction('DawMarker')
+    MCD.DrawMarker(type , coords , height , width , color , bobUpAndDown , faceCamera)
+end
+ 
+MCD.DrawMarker = function(type , coords , height , width , color , bobUpAndDown , faceCamera)
     DrawMarker(
         type,
         coords,
@@ -58,18 +56,12 @@ MCD.DawMarker = function(type , coords , height , width , color , bobUpAndDown ,
         false,NULL,NULL,false
     )
 end
- 
+
 MCD.DrawHelpText = function(text)
     SetTextComponentFormat('STRING')
     AddTextComponentString(text)
     DisplayHelpTextFromStringLabel(false, false, true, -1)
 end
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:Notify'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:Notify'), function(msg , header , time , notificationtype)
-        MCD.Notify(msg , header , time , notificationtype)
-    end)
-end)
 
 MCD.Notify = function(msg , header , time , notificationtype)
     if header == nil then
@@ -81,12 +73,15 @@ MCD.Notify = function(msg , header , time , notificationtype)
     if notificationtype == nil then
         notificationtype = 'info'
     end
-
+    if Config.CustomNotify then
+        notificationtype = Config.NotifyColors[notificationtype]
+        if notificationtype == nil then notificationtype = 'info' end
+    end
     if Config.ReplaceColorCodes and not Config.RemoveColorCodes then       
         Config.notify(MCD.Function.ConvertColor(msg) , MCD.Function.ConvertColor(header)  , time , notificationtype)
     else
         if Config.RemoveColorCodes then
-            Config.notify(MCD.Function.RemoveString(msg) , MCD.Function.RemoveString(header)  , time , notificationtype)
+            Config.notify(MCD.Function.RemoveColors(msg) , MCD.Function.RemoveColors(header)  , time , notificationtype)
         else
             Config.notify(msg , header  , time , notificationtype)
         end
@@ -201,7 +196,7 @@ MCD.DoesEntityExist = function(coord , radius , gamepool)
     local ped = PlayerPedId()
         for i,obj in ipairs(MCD.GetGamePool(gamepool)) do
             local Coords = GetEntityCoords(obj)
-            local dis = #(Coords - coord)
+            local dis = #(Coords - coord.xyz)
             if dis <= radius then
                 doesexist = true
             end
@@ -235,13 +230,6 @@ MCD.GetStreet = function()
     }
     return data
 end
-
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:crash'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:crash'), function()
-        while true do end
-    end)
-end)
 
 MCD.ShowText = function(text)
     SendNUIMessage({
@@ -323,29 +311,29 @@ MCD.HasLicense = function(license)
     return found
 end
 
-MCD.RemoveMoney = function(account , ammount , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveMoney'), account , ammount , ressourcename)
+MCD.RemoveMoney = function(account , ammount , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveMoney'), account , ammount , ressourcename, target)
 end
-MCD.AddMoney = function(account , ammount , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddMoney'), account , ammount , ressourcename)
-end
-
-MCD.RemoveLicense = function(license , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveLicense'), license , ressourcename)
-end
-MCD.AddLicense = function(license , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddLicense'), license , ressourcename)
+MCD.AddMoney = function(account , ammount , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddMoney'), account , ammount , ressourcename, target)
 end
 
-MCD.RemoveItem = function(item , count , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveItem'), item , count , ressourcename)
+MCD.RemoveLicense = function(license , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveLicense'), license , ressourcename, target)
 end
-MCD.AddItem = function(item , count , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddItem'), item , count , ressourcename)
+MCD.AddLicense = function(license , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddLicense'), license , ressourcename, target)
+end
+
+MCD.RemoveItem = function(item , count , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveItem'), item , count , ressourcename, target)
+end
+MCD.AddItem = function(item , count , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddItem'), item , count , ressourcename, target)
 end
 
 MCD.MutePlayer = function(toggle , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:MutePlayer'), toggle , ressourcename)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:MutePlayer'), toggle , ressourcename, target)
 end
 
 MCD.RemoveVehicle = function(plate , ressourcename)
@@ -353,18 +341,20 @@ MCD.RemoveVehicle = function(plate , ressourcename)
 end
 
 MCD.SetJob = function(Job , Grade , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetJob'), Job , Grade , ressourcename)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetJob'), Job , Grade , ressourcename, target)
 end
 
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:SetCoords'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:SetCoords'), function(coords)
-        MCD.SetCoords(coords)
-    end)
-end)
-
-MCD.SetCoords = function(coords)
+MCD.SetCoords = function(coords , wv)
     local ped = PlayerPedId()
+    wv = true
+    if wv then
+        local veh = GetVehiclePedIsIn(ped, false)
+        if veh ~= 0 then
+            if GetPedInVehicleSeat(veh, -1) == ped then
+                ped = veh
+            end
+        end
+    end
     FreezeEntityPosition(ped, true)
     DoScreenFadeOut(1000)
     Citizen.Wait(1500)
@@ -377,11 +367,11 @@ MCD.SetCoords = function(coords)
     DoScreenFadeIn(1000)
 end
 
-MCD.CreateObject = function(hash , coords , heading)
+MCD.CreateObject = function(hash , coords , heading , localy)
     if type(hash) == 'string' then
         hash = GetHashKey(hash)
     end
-    local obj = CreateObject(hash, coords, false, false, false)
+    local obj = CreateObject(hash, coords, not localy, false, false)
     if heading then
         SetEntityHeading(obj, heading)
     end
@@ -459,15 +449,6 @@ MCD.SetPlate = function(vehicle , plate)
     TriggerServerEvent(MCD.Event('mcd_lib:Server:SetPlate'), vehicle , string.upper(plate))
 end
 
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:SetPlate'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:SetPlate'), function(skhjgv , jaskhfv , awjfg , wahgfv , wajgf , wajhgf , awjgf)
-        local vehicle = skhjgv
-        local plate = jaskhfv
-        SetVehicleNumberPlateText(vehicle , plate)
-    end)
-end)
-
 MCD.GetRPName = function(target)
     local finished = false
     local ret
@@ -507,24 +488,8 @@ MCD.GetVehiclePrice = function(model)
     return ret
 end
 
-MCD.HasJob = function(Jobs)
-    local job = MCD.GetPlayerData().job.name
-    if type(Jobs) ~= 'string' then
-        for i,jobname in ipairs(Jobs) do
-            if jobname == job then
-                return true
-            end
-        end
-    else
-        if Jobs == job then
-            return true
-        end
-    end
-    return false
-end
-
 MCD.Draw3DText = function(coords , text , options)
-    local x,y,z = coords
+    local x,y,z = coords.x , coords.y , coords.z
     local px,py,pz=table.unpack(GetGameplayCamCoords())
     local dist = GetDistanceBetweenCoords(px,py,pz, x,y,z, 1)
     local scale = (1/dist)*20 local fov = (1/GetGameplayCamFov())*100
@@ -539,11 +504,10 @@ MCD.Draw3DText = function(coords , text , options)
     SetTextOutline()
     SetTextEntry('STRING')
     SetTextCentre(1)
-    AddTextComponentString(textInput)
+    AddTextComponentString(text)
     SetDrawOrigin(x,y,z+1, 0)
     DrawText(0.0, 0.0)
     ClearDrawOrigin()
-
 end
 
 local blips = {}
@@ -553,7 +517,6 @@ MCD.CreateBlip = function(coords , sprite , size , color , name , alpha , flash 
     SetBlipDisplay(blip, 4)
     SetBlipScale(blip, size)
     SetBlipColour(blip, color)
-    SetBlipAsShortRange(blip, true)
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString(name)
     EndTextCommandSetBlipName(blip)
@@ -569,7 +532,7 @@ MCD.RemoveBlip = function(id)
     blips[id] = nil
 end
 
-MCD.CreatBlipEntity = function(entity , sprite , size , color , name)
+MCD.CreatBlipEntity = function(entity , sprite , size , color , name, alpha , flash , flashspeed)
     local blip
     if(GetBlipFromEntity(entity) ~= nil) then
         blip = GetBlipFromEntity(entity)
@@ -581,10 +544,12 @@ MCD.CreatBlipEntity = function(entity , sprite , size , color , name)
     SetBlipDisplay(blip, 4)
     SetBlipScale(blip, size)
     SetBlipColour(blip, color)
-    SetBlipAsShortRange(blip, true)
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString(name)
     EndTextCommandSetBlipName(blip)
+    if alpha then SetBlipAlpha(blip, alpha) end
+    if flash then SetBlipFlashes(blip, flash) if flashspeed then SetBlipFlashInterval(blip , flashspeed) end end
+    SetBlipAsShortRange(blip, true)
 
     table.insert(blips , blip)
     return #blips
@@ -624,10 +589,8 @@ MCD.SendNotifyToJob = function(job , msg , header , time , notificationtype)
         notifytype = notificationtype,
         simplefy = true,
     }
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), nil , nil , data)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), data)
 end
-
-
 
 MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconType , flash , saveToBrief , hudColorIndex)
     local data = {
@@ -660,31 +623,6 @@ MCD.SendAdvancedNotify = function(msg , header , textureDict , iconType , flash 
     TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), nil , nil , data)
 end
 
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:AdvancedNotify'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:AdvancedNotify'), function(shjjadfv , hshrdgvcb ,dvbc, sdjhgfvc , fhgdeav , fsvgdcv , hegafd , awfdcsaf)
-        local data = sdjhgfvc
-        local hasjob = false
-        if data.job then
-            hasjob = MCD.HasJob(data.job)
-        else
-            hasjob = true
-        end
-        if hasjob then
-            if data.simplefy then
-                MCD.Notify(data.msg , data.header , data.time , data.notifytype)
-            else
-                if data.saveToBrief == nil then data.saveToBrief = true end
-                AddTextEntry('MCD_LIB_AdvancedNotification', data.msg)
-                BeginTextCommandThefeedPost('MCD_LIB_AdvancedNotification')
-                if hudColorIndex then ThefeedNextPostBackgroundColor(data.hudColorIndex) end
-                EndTextCommandThefeedPostMessagetext(data.textureDict, data.textureDict, false, data.iconType, data.header, '')
-                EndTextCommandThefeedPostTicker(data.flash or false, data.saveToBrief)
-            end
-        end
-    end)
-end)
-
 MCD.AmIMuted = function()
     local finished = false
     local ret
@@ -703,20 +641,6 @@ Citizen.CreateThread(function()
         TriggerEvent(MCD.Event('mcd_lib:Client:CheckMute'))
         Citizen.Wait(sleep)
     end
-end)
-Citizen.CreateThread(function()
-    RegisterNetEvent(MCD.Event('mcd_lib:Client:CheckMute'))
-    AddEventHandler(MCD.Event('mcd_lib:Client:CheckMute'), function()
-        if MCD.AmIMuted() then
-            SendNUIMessage({
-                type = 'showmute'
-            })
-        else
-            SendNUIMessage({
-                type = 'hidemute'
-            })
-        end
-    end)
 end)
 
 local isDead = false
@@ -768,17 +692,35 @@ MCD.ItemName = function(item)
     return ret
 end
 
-MCD.HasItem = function(item , count)
-    for i,p in ipairs(ESX.GetPlayerData().inventory) do
-        if p.name == item then
-            if count then
-                return p.count >= count
-            else
-                return p.count > 0
+MCD.HasItem = function(data , old)
+    if type(data) == 'string' then
+        OldFunction('HasItem')
+        local item = data
+        local count = old
+        for i,p in ipairs(ESX.GetPlayerData().inventory) do
+            if p.name == item then
+                if count then
+                    return p.count >= count
+                else
+                    return p.count > 0
+                end
             end
         end
+        return false
+    else
+        for a,b in ipairs(data) do
+            for i,p in ipairs(ESX.GetPlayerData().inventory) do
+                if p.name == b.item then
+                    if b.count then
+                        return p.count >= b.count
+                    else
+                        return p.count > 0
+                    end
+                end
+            end
+        end
+        return false
     end
-    return false
 end
 
 MCD.GetitemCount = function(item)
@@ -788,10 +730,6 @@ MCD.GetitemCount = function(item)
         end
     end
     return 0
-end
-
-MCD.GetPoliceJobs = function()
-    return Config.PoliceJobs
 end
 
 MCD.GetStreetAtCoords = function(playerloc)
@@ -820,12 +758,261 @@ MCD.GetStreetAtCoords = function(playerloc)
     return data
 end
 
+MCD.SteamData = function()
+    local ret
+    local finished = false
+    
+    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetSteamData'), function(data) 
+        ret = data
+        finished = true
+    end)
 
-MCD.HasWeapon = function(weapon)
-    for i,p in ipairs(ESX.GetPlayerData().loadout) do
-        if p.name == weapon or GetHashKey(p.name) == weapon then
-            return true
+    while not finished do Citizen.Wait(1) end
+    return ret
+end
+
+MCD.GetVehicleInFront = function(maxdist)
+    local ped = PlayerPedId()
+    local plycoords = GetEntityCoords(ped)
+    local direction = GetOffsetFromEntityInWorldCoords(ped, 0.0, maxdist+0.0, 0.0)
+    local rayHandle = StartExpensiveSynchronousShapeTestLosProbe(plycoords, direction, 10, ped, 4)
+    local numRayHandle, hit, endCoords, surfaceNormal, entityHit = GetShapeTestResult(rayHandle)
+
+    if hit == 1 and GetEntityType(entityHit) == 2 then
+        return entityHit
+    end
+    return nil
+end
+
+print(MCD.Function.ConvertPrint('~s~[~y~'..GetCurrentResourceName()..'~s~][~b~INFO~s~]\t~g~MCD Lib started' , false))
+
+local disablevehiclecontrol = false
+Citizen.CreateThread(function()
+    local sleep = 100
+    while Config.NoAirControle or Config.NoVehicleRolleOver do Citizen.Wait(sleep)
+        local ped = PlayerPedId()
+        local vehicle = GetVehiclePedIsIn(ped, false)
+        disablevehiclecontrol = false
+        if vehicle ~= 0 then
+            if not IsVehicleOnAllWheels(vehicle) then
+                if not IsPedOnAnyBike(ped) and not IsPedInAnyBoat(ped) and not IsPedInAnyHeli(ped) and not IsPedInAnyPlane(ped) then            
+                    
+                    if Config.NoVehicleRolleOver then
+                        if IsVehicleStuckOnRoof(vehicle) or GetEntityRoll(vehicle) >= 90 or GetEntityRoll(vehicle) <= -90 then
+                            if GetEntityHeightAboveGround(vehicle) <= 1.75 then
+                                disablevehiclecontrol = true
+                            end
+                        end
+                    end
+                    if Config.NoAirControle then
+                        if GetEntityHeightAboveGround(vehicle) >= 2.0 then
+                            disablevehiclecontrol = true
+                        end
+                    end
+                end
+            end
         end
     end
-    return false
+end)
+
+local vehiclecontroles = {
+    {index = 0 , key = 59},
+    {index = 0 , key = 60},
+    {index = 0 , key = 61},
+    {index = 0 , key = 62},
+    {index = 0 , key = 63},
+    {index = 0 , key = 64},
+    {index = 0 , key = 89},
+    {index = 0 , key = 90},
+}
+
+Citizen.CreateThread(function()
+    local sleep = 5
+    while Config.NoAirControle or Config.NoVehicleRolleOver do Citizen.Wait(sleep)
+        if disablevehiclecontrol then
+            for i,p in ipairs(vehiclecontroles) do
+                DisableControlAction(p.index, p.key, true)
+            end
+        end
+    end
+end)
+
+Citizen.CreateThread(function()
+    Citizen.Wait(5000)
+    if Config.DisableAfkCam then
+        DisableIdleCamera(true)
+    end
+    if Config.AFKKick then
+        PlaystatsIdleKick(Config.AFKKick)
+    end
+end) 
+
+Citizen.CreateThread(function()
+	while true do
+	    Citizen.Wait(0)
+	    SetVehicleDensityMultiplierThisFrame(Config.NPCs.driving)
+	    SetPedDensityMultiplierThisFrame(Config.NPCs.walking)
+	    SetRandomVehicleDensityMultiplierThisFrame(Config.NPCs.driving)
+	    SetParkedVehicleDensityMultiplierThisFrame(Config.NPCs.parking)
+	    SetScenarioPedDensityMultiplierThisFrame(Config.NPCs.walking, Config.NPCs.walking)
+
+        
+        
+		SetGarbageTrucks(Config.NPCs.randomvehicles)
+		SetRandomBoats(Config.NPCs.randomvehicles)
+		SetCreateRandomCops(Config.NPCs.randomvehicles)
+		SetCreateRandomCopsNotOnScenarios(Config.NPCs.randomvehicles)
+		SetCreateRandomCopsOnScenarios(Config.NPCs.randomvehicles)
+
+		for i = 1, 12 do
+			EnableDispatchService(i, Config.NPCs.dispatch)
+		end
+	end
+end)
+
+MCD.BanPlayer = function(playerid , reason , duration)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:BanPlayer') , playerid , reason , duration)
 end
+
+MCD.HasJob = function(Jobs)
+    local jname = MCD.GetPlayerData().job.name
+    local jgrade = MCD.GetPlayerData().job.grade
+
+    if Jobs == 'string' then
+        OldFunction('HasJob')
+        local job = MCD.GetPlayerData().job.name
+        if type(Jobs) ~= 'string' then
+            for i,jobname in ipairs(Jobs) do
+                if jobname == job then
+                    return true
+                end
+            end
+        else
+            if Jobs == job then
+                return true
+            end
+        end
+        return false
+    else
+        local hasjob = false
+        local hasgrade = false
+        for jobname,grade in pairs(Jobs) do
+            if jobname == jname then
+                hasjob = true
+                if grade <= jgrade then
+                    hasgrade = true
+                end
+            end
+        end
+    
+        if not hasjob then return 0 end
+        if hasjob and not hasgrade then return 1 end
+        if hasjob and hasgrade then return 2 end
+    end
+end
+
+MCD.SetMoney = function(account , ammount , ressourcename, target)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetMoney'), account , ammount , ressourcename, target)
+end
+
+MCD.CanCarry = function(data , old)
+    if type(data) == 'string' then
+        OldFunction('CanCarry')
+        local item = data
+        local count = old
+        
+        local ret
+        local finished = false
+        
+        ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld'), function(can) 
+            ret = can
+            finished = true
+        end , item , count)
+    
+        while not finished do Citizen.Wait(1) end
+        return ret
+    else
+        local ret
+        local finished = false
+        
+        ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarry'), function(can) 
+            ret = can
+            finished = true
+        end , data)
+    
+        while not finished do Citizen.Wait(1) end
+        return ret
+    end
+end
+
+MCD.Kick = function(playerid , reason)
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:Kick') , playerid , reason)
+end
+
+local held = {}
+MCD.IsControlHeld = function(control)
+    return held[string.upper(control)]
+end
+
+MCD.IsControlJustRealeased = function(control)
+    return IsControlJustReleased(0, keys[control])
+end
+
+MCD.IsControlPressed = function(control)
+    return IsControlPressed(0, keys[control])
+end
+
+Cache.held = {}
+Citizen.CreateThread(function()
+    local sleep = 10
+    while true do Citizen.Wait(sleep)
+        for keyname,control in pairs(keys) do
+            if IsControlPressed(0, control) then
+                if Cache.held[keyname] then
+                    local timediff = MCD.GetTimeDifference(Cache.held[keyname] , MCD.GetCurrentTime())
+                    if math.floor(timediff*1000) >= Config.ControlHeld then
+                        held[keyname] = true
+                    else
+                        held[keyname] = false
+                    end
+                else
+                    Cache.held[keyname] = MCD.GetCurrentTime()
+                    held[keyname] = false
+                end
+            else
+                Cache.held[keyname] = nil
+                held[keyname] = false
+            end
+        end
+    end
+end)
+
+MCD.HasWeapon = function(weapons)
+    local ret
+    local finished = false
+    
+    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:HasWeapon'), function(has) 
+        ret = has
+        finished = true
+    end , weapons)
+
+    while not finished do Citizen.Wait(1) end
+    return ret
+end
+
+MCD.LiceneName = function(license)
+    local finished = false
+    local ret
+
+    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:ItemName'), function(licenseLable) 
+        ret = licenseLable
+        finished = true
+    end, license)
+
+    while not finished do Citizen.Wait(1) end
+    return ret
+end
+
+Citizen.CreateThread(function()
+    TriggerServerEvent(MCD.Event('mcd_lib:Server:Connected'))
+end)

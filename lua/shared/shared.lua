@@ -1,4 +1,13 @@
-MCD.Config = Config
+MCD = {}
+AddEventHandler('mcd_lib:getSharedObject', function(cb)
+	cb(MCD)
+end)
+exports('getSharedObject', function()
+	return MCD
+end)
+MCD.Config = function()
+	return Config
+end
 
 MCD.GetLowestGroup = function()
     return Config.ServerGroups[#Config.ServerGroups - 1]
@@ -8,7 +17,19 @@ MCD.ServerName = function()
     return Config.ServerName
 end
 
-local keys = {
+MCD.ServerLogo = function()
+    return Config.ServerLogo
+end
+
+MCD.GetPoliceJobs = function()
+	local jobs = {}
+	for i,job in pairs(Config.PoliceJobs) do
+		jobs[job] = 0
+	end
+    return jobs
+end
+
+keys = {
 	["ESC"] = 322, ["F1"] = 288, ["F2"] = 289, ["F3"] = 170, ["F5"] = 166, ["F6"] = 167, ["F7"] = 168, ["F8"] = 169, ["F9"] = 56, ["F10"] = 57, 
 	["~"] = 243, ["1"] = 157, ["2"] = 158, ["3"] = 160, ["4"] = 164, ["5"] = 165, ["6"] = 159, ["7"] = 161, ["8"] = 162, ["9"] = 163, ["-"] = 84, ["="] = 83, ["BACKSPACE"] = 177, 
 	["TAB"] = 37, ["Q"] = 44, ["W"] = 32, ["E"] = 38, ["R"] = 45, ["T"] = 245, ["Y"] = 246, ["U"] = 303, ["P"] = 199, ["["] = 39, ["]"] = 40, ["ENTER"] = 18,
@@ -31,10 +52,10 @@ local keysinput = {
 	["NENTER"] = 'INPUT_FRONTEND_ACCEPT', ["N4"] = 'INPUT_VEH_FLY_ROLL_LEFT_ONLY', ["N5"] = 'INPUT_VEH_FLY_PITCH_UD', ["N6"] = 'INPUT_VEH_FLY_ROLL_LR', ["N+"] = 'INPUT_VEH_CINEMATIC_UP_ONLY', ["N-"] = 'INPUT_VEH_CINEMATIC_DOWN_ONLY', ["N7"] = 'INPUT_VEH_FLY_SELECT_TARGET_LEFT', ["N8"] = 'INPUT_VEH_FLY_PITCH_UP_ONLY', ["N9"] = 'INPUT_VEH_FLY_SELECT_TARGET_RIGHT'
 }
 MCD.Key = function(key)
-    return keys[key]
+    return keys[string.upper(key)]
 end
 MCD.KeyString = function(key)
-    return '~'..keysinput[key]..'~'
+    return '~'..keysinput[string.upper(key)]..'~'
 end
 
 MCD.GetMarkerSpeed = function()

@@ -11,6 +11,11 @@ MCD.Function.String = function(string)
 end
 
 MCD.Function.RemoveString = function(string) 
+    OldFunction('RemoveString')
+    return MCD.Function.RemoveColors(string)
+end
+
+MCD.Function.RemoveColors = function(string) 
     if string == nil then
         string = 'NULL'
     end
@@ -80,4 +85,59 @@ MCD.Function.cKey = function(lenght)
         end
     end
     return key
+end
+
+MCD.Function.CSpeed = function(speed , withstring)
+    if Config.usemph then
+        local s = math.floor(speed * 2.236936)
+        if withstring then
+            s = s .. 'mph'
+        end
+        return s
+    else
+        local s = math.floor(speed * 3.61)
+        if withstring then
+            s = s .. 'kmh'
+        end
+        return s
+    end
+end
+
+local moneycfg = {
+    {val = 1000 , txt = 'Tausend'},
+    {val = math.floor(1e6) , txt = 'Mio.'},
+    {val = math.floor(1e9) , txt = 'Mrd.'},
+    {val = math.floor(1e12) , txt = 'Bill.'},
+    {val = math.floor(1e15) , txt = 'Brd.'},
+    {val = math.floor(1e18) , txt = 'Trill.'},
+    {val = math.floor(1e21) , txt = 'Trd.'},
+    {val = 1e24 , txt = 'Quadrillion'},
+    {val = 1e27 , txt = 'Quadrilliarde'},
+    {val = 1e30 , txt = 'Quintillion'},
+    {val = 1e33 , txt = 'Quintilliarde'},
+    {val = 1e36 , txt = 'Sextillion'},
+    {val = 1e39 , txt = 'Sextilliarde'},
+    {val = 1e42 , txt = 'Septillion'},
+    {val = 1e45 , txt = 'Septilliarde'},
+    {val = 1e48 , txt = 'Oktillion'},
+    {val = 1e51 , txt = 'Oktilliarde'},
+    {val = 1e54 , txt = 'Nonillion'},
+    {val = 1e57 , txt = 'Nonilliarde'},
+    {val = 1e60 , txt = 'Dezillion'},
+    {val = 1e63 , txt = 'Dezilliarde'},
+    {val = 1e66 , txt = 'undecillion'},
+    {val = 1e69 , txt = 'undecilliarde'},
+    {val = 1e100 , txt = 'googol'},
+    {val = 1e156 , txt = 'sexvigintillion'},
+    {val = 1e600 , txt = 'zentillion'},
+}
+
+MCD.Function.ConvertMoney = function(money)
+    local currency = '$'
+    if Config.UseEuro then currency = '€' end
+    local ret = money..currency
+    for i,p in ipairs(moneycfg) do
+        if money >= p.val then ret = ESX.Math.Round(tonumber(money)/p.val, 2)..p.txt..currency end 
+    end
+    return ret
 end
