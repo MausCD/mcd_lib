@@ -42,6 +42,8 @@ Locales['de'] = {
 	['error_additem'] = ' ~y~%s~s~ benutz ~b~AddItem~s~ ~o~falsch~s~ es wurde ~r~kein Item~s~ angegeben. ~p~Standartmäßig auf "bread" gestellt',	
 	['error_additem2'] = '~y~%s~s~ benutz ~b~AddItem~s~ ~o~falsch~s~ es wurde ~r~kein Betrag~s~ angegeben der ~g~Entfernt~s~ werden soll. ~p~Standartmäßig auf 0 gestellt',	
 	
+	['error_convertmoney'] = ' Ein ~y~Script~s~ benutz ~b~ConvertMoney~s~ ~o~falsch~s~ es wurde ~r~kein Betrag~s~ angegeben. ~p~Standartmäßig auf 0 gestellt',	
+
 	['updated'] = '[~y~%s~s~][~b~INFO~s~]\t ~b~Alles UpToDate! (Version: ~p~%s~b~)',	
 	['update'] = '[~y~%s~s~][~b~INFO~s~]\t ~o~Ein Update ist verfügbar! (Momentane Version: ~r~%s~o~)',	
 	['name'] = '[~y~%s~s~][~r~ERROR~s~]\t ~o~ Es kann zu komplikationen kommen wenn der Ordner nicht ~b~mcd_lib~o~ heißt!',	
@@ -71,6 +73,7 @@ Locales['de'] = {
 	
 	['kicked_player'] = '%s~s~ hat den Spieler %s~s~ gekickt für ~y~%s',	
 	['kicked_script'] = '%s~s~ wurde gekickt für ~y~%s',	
+		
 	-- Webhook
 	['Webhook_money_add'] = '+ %s$ wurden %s hinzugefügt (%s)',
 	['Webhook_money_remove'] = '- %s$ wurden %s entfernt (%s)',

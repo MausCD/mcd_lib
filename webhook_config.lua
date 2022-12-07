@@ -3,7 +3,7 @@ Config.WebHook = {
     ['color'] = 16711680,
     ['default'] = {
         Name = 'MCD Lib',
-        DiscordWebHook = 'https://discord.com/api/webhooks/1008467859401359400/AvMkG_krIeewYXT8h3FEfi3Cp5OzFB1PfxOkLzI2NXxniCy8a9Z_R-qSWbFjAgo4YYTl',
+        DiscordWebHook = '',
     },
     ['money'] = {
         Name = 'MCD Lib - Money',

@@ -206,7 +206,7 @@ Citizen.CreateThread(function()
         cb(MCD.HasWeapon(src , weapons))
     end)
     
-    ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:ItemName'), function(src , cb , param1 , param2 , param3 , param4 , param5)
+    ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:LiceneName'), function(src , cb , param1 , param2 , param3 , param4 , param5)
         local license = param1
         cb(MCD.LiceneName(license))
     end)

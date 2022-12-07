@@ -1,3 +1,2 @@
 savedtables = {
-	["mcd_moneyprint"] = '[]',
 }

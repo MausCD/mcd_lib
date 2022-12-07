@@ -104,7 +104,7 @@ MCD.Function.CSpeed = function(speed , withstring)
 end
 
 local moneycfg = {
-    {val = 1000 , txt = 'Tausend'},
+    {val = 1000 , txt = 'Tsd.'},
     {val = math.floor(1e6) , txt = 'Mio.'},
     {val = math.floor(1e9) , txt = 'Mrd.'},
     {val = math.floor(1e12) , txt = 'Bill.'},
@@ -133,9 +133,13 @@ local moneycfg = {
 }
 
 MCD.Function.ConvertMoney = function(money)
+    if not money then
+        money = 0
+        print(MCD.Function.ConvertPrint(_U('error').._U('error_convertmoney') , true))
+    end
     local currency = '$'
     if Config.UseEuro then currency = '€' end
-    local ret = money..currency
+    local ret = ESX.Math.Round(money, 3)..currency
     for i,p in ipairs(moneycfg) do
         if money >= p.val then ret = ESX.Math.Round(tonumber(money)/p.val, 2)..p.txt..currency end 
     end

@@ -2,7 +2,7 @@ fx_version 'bodacious'
 game 'gta5'
 author 'MausCD'
 description 'MCD Script Libary'
-version '1.0.7'
+version '1.0.8'
 
 lua54 'yes'
 

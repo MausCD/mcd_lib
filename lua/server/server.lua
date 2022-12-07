@@ -652,6 +652,7 @@ function VersionState(ressourcename , scriptname , first)
 end
 
 local lastupdate = MCD.GetCurrentTime()
+local firstmsg = false
 function CheckForUpdates()
     lastupdate =  MCD.GetCurrentTime()
     for i,p in ipairs(checker) do
@@ -686,7 +687,7 @@ MCD.AddUpdateChecker = function(scriptname , ressourcename)
             if not found then
                 table.insert(checker , {script = scriptname , ressourcename = ressourcename})
             end
-            if MCD.Math.TimeDifference(lastupdate , MCD.GetCurrentTime()) > 5 then
+            if MCD.Math.TimeDifference(lastupdate , MCD.GetCurrentTime()) > 5 and firstmsg then
                 Citizen.SetTimeout(0, function()
                     CheckForUpdates()
                 end)                  
@@ -703,6 +704,7 @@ Citizen.CreateThread(function()
     MCD.AddUpdateChecker('mcd_lib', GetCurrentResourceName())    
     Citizen.Wait(5*1000)
     CheckForUpdates()
+    firstmsg = true
     while true do
         Citizen.Wait(60 * 60 * 1000)
         CheckForUpdates()
@@ -769,11 +771,13 @@ end
 AddEventHandler('onResourceStop', function(resourceName)
     if (GetCurrentResourceName() == resourceName) then
         newkey()
-        MCD.SaveTables()
+        MCD.SaveTables()         
     end
 end)
 AddEventHandler('txAdmin:events:serverShuttingDown', function()
     newkey()
+    Citizen.Wait(1000)
+    MCD.SaveTables()
 end)
 
 Citizen.CreateThread(function()
@@ -1294,8 +1298,16 @@ end
 MCD.LiceneName = function(license)
     local ret
     MySQL.Async.fetchAll('SELECT * FROM licenses WHERE type = "' .. license .. '"', {}, function(result)
-        ret = result[1].label
+        if result[1] then
+            ret = result[1].label
+        else
+            ret = 'Error'
+        end 
     end)
     while not ret do Citizen.Wait(5) end
     return ret
 end
+
+RegisterCommand('savetables', function()
+    MCD.SaveTables()
+end, true)

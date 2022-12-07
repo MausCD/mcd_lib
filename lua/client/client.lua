@@ -1004,7 +1004,7 @@ MCD.LiceneName = function(license)
     local finished = false
     local ret
 
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:ItemName'), function(licenseLable) 
+    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:LiceneName'), function(licenseLable) 
         ret = licenseLable
         finished = true
     end, license)

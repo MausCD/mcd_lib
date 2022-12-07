@@ -1,9 +1,9 @@
 Config = {}
 
-Config.Locale = 'en'
+Config.Locale = 'de'
 Config.ServerName = 'MRP'
 
-Config.ServerLogo = 'link'
+Config.ServerLogo = 'https://cdn.discordapp.com/attachments/982381663906562098/989575093489401876/newliferplogoanimationtransparent.gif'
 
 Config.defaultBinding = 'F6'
 Config.defaultMapper = 'KEYBOARD'
@@ -53,7 +53,7 @@ Config.AllowConsole = true
 Config.AutoBanAfterKicks = 0 -- 0 to disable
 Config.AutoBanDuration = 2*60 -- in min | 0 for permanent
 
-Config.DefaultESXNotification = false
+Config.DefaultESXNotification = true
 
 Config.DefaultNotifyHeader = 'MRP'
 Config.notify = function(msg , header , time , notificationtype)
@@ -90,4 +90,4 @@ Config.SudoCommand = {
 Config.UpdateMsg = true
 Config.DebugMode = false
 
-Config.Key = 'MCD_Loves_U:1r2/60µs3qh04°uz0aWP2L4D8_0_027Z!2336_§pd439#891;36qP135c>503b45l44v493x6N27<GfN9!811751'
+Config.Key = 'MCD_Loves_U:413e=7ws17m2165nm_5~r545=02n27;H05IT55w56790553451A|38°73i588M4pS20R22<07,3Q3u51~#49p!pv'
