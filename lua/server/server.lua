@@ -1,19 +1,43 @@
+function base64_decode(data)local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'data = string.gsub(data, '[^'..b..'=]', '')return (data:gsub('.', function(x)  if (x == '=') then return '' end  local r,f='',(b:find(x)-1)  for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end  return r;end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)  if (#x ~= 8) then return '' end  local c=0  for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end  return string.char(c)end))end
 
-local events = {}
-
-EventString = function(lenght)
-    local event = 'MCD_Loves_U:'
-    event = event..MCD.Function.cKey(lenght-#event)
-
-    for tableevent,tablecrypt in pairs(events) do
-        if tablecrypt == event then
-            return EventString(lenght)
-        end
+MCD.GetTable = function(tablename)
+    if savedtables[tablename] then
+        return json.decode(savedtables[tablename])
+    else
+        return {}
     end
-    return event
+end
+MCD.TriggerClientEvent = function(event , src , ...)
+    TriggerClientEvent(MCD.Event(event), src , ...)
+end
+local events = {}
+MCD.RegisterServerCallback = function(event , cb)
+    if not events[event] then
+        events[event] = {}
+    end
+    table.insert(events[event] , {
+        cb = cb,
+        ressource = GetInvokingResource()
+    })
 end
 
-MCD.SendToDiscord = function(Text , ressourcename , discordtype)
+MCD.RegisterEvent('mcd_lib:Server:Callback' , function(src , svevent , event , ...)
+    local s = src
+    if not events[svevent] then
+        return
+    end
+    for i,p in ipairs(events[svevent]) do
+        p.cb(s , function(...)
+            MCD.TriggerClientEvent(event , s , ...)
+        end , ...)
+    end
+end)
+
+MCD.SendToDiscord = function(Text , resname , discordtype)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
     if ressourcename == nil then
         ressourcename = 'nil'
     end
@@ -40,35 +64,6 @@ MCD.SendToDiscord = function(Text , ressourcename , discordtype)
    
     PerformHttpRequest(Config.WebHook[discordtype].DiscordWebHook, function(err, text, headers) end, 'POST', json.encode({ username = Config.WebHook[discordtype].Name,embeds = embeds,avatar_url = Config.WebHook['avatar']}), { ['Content-Type'] = 'application/json' })
 end
-local key = Config.Key
-function newkey()
-    if not Config.Key then
-        Config.Key =  'MCD_Loves_U:ashgdfiawmnbjn124bnkfilajn3jJHnfvlkasefLHFhJsoikgfhJfbnAJFbfasdkjgf3786SGFVJKH'
-        key = Config.Key
-    end
-    local path = GetResourcePath(GetCurrentResourceName())..'/config.lua'
-    local file,err = io.open(path,'r+')
-    MCD.SendToDiscord('New Key requested' , GetCurrentResourceName() , 'default')
-    if file then
-        local generatedkey = EventString(Config.EntcrypedEventLenght)
-        local text = file:read('*a')
-        if not string.find(text , key ,1, true) then
-            text = text .. "\n\nConfig.Key = '" .. generatedkey .. "'"
-        else
-            text = text:gsub('%'..key , generatedkey)
-        end
-        key = generatedkey
-        file:close()
-        local file2,err2 = io.open(path,'w+')
-        file2:write(text)
-        file2:close()
-    else print("error:", err) end
-end
-
-Citizen.CreateThread(function()
-    Citizen.Wait(1000)
-    newkey()
-end)
 
 function OldFunction(OldFunction)
     if Config.UpdateMsg then
@@ -96,22 +91,11 @@ MCD.PrintConsole = function(text , date)
     print(MCD.Function.ConvertPrint(text , date))
 end
 
-MCD.Event = function(eventname)
-    if Config.EntcrypedEventLenght < 10 then
-        Config.EntcrypedEventLenght = 10
+MCD.STDiscord = function(Text , DiscordWebHook , color , Name, avatar, resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
     end
-    if events[eventname] then
-        return events[eventname]
-    else
-        events[eventname] = EventString(Config.EntcrypedEventLenght)
-        if Config.DebugMode then
-            print(MCD.Function.ConvertPrint('[~y~'..GetCurrentResourceName()..'~s~][~c~DEBUG~s~]\t Entcryped Event (~p~"'..eventname..'"~s~) (~c~'..events[eventname]..'~s~)' , true))
-        end
-        return events[eventname]
-    end
-end
-
-MCD.STDiscord = function(Text , DiscordWebHook , color , Name, avatar, ressourcename)
     if DiscordWebHook == '' then DiscordWebHook = Config.WebHook['default'].DiscordWebHook end
 
     if Config.PrintDiscord then
@@ -128,6 +112,73 @@ MCD.STDiscord = function(Text , DiscordWebHook , color , Name, avatar, ressource
     }
     if Text == nil or Text == '' then return FALSE end
     PerformHttpRequest(DiscordWebHook, function(err, text, headers) end, 'POST', json.encode({ username = Name,embeds = embeds,avatar_url = avatar}), { ['Content-Type'] = 'application/json' })
+end
+
+MCD.SendLog = function(WebhookName , text)
+    if type(WebhookName) == 'string' then
+        local webhook = Config.WebHook[WebhookName]
+        if not webhook then
+            webhook = Config.WebHook['default']
+        end
+        if webhook.DiscordWebHook == '' then
+            webhook.DiscordWebHook = Config.WebHook['default'].DiscordWebHook
+        end
+        
+        if not webhook.Color then
+            webhook.Color = Config.WebHook['default'].Color
+        end
+    
+        local data = {
+            {
+                ["color"] = webhook.Color,
+                ["author"] = {
+                    ["icon_url"] = '',
+                    ["name"] = webhook.Name,
+                },
+                ["description"] = text,
+                ["footer"] = {
+                    ["text"] = os.date('%d.%m.%Y [%X Uhr]'),
+                }
+            }
+        }    
+        
+        PerformHttpRequest(webhook.DiscordWebHook, function(err, text, headers) end, 'POST', json.encode({
+            embeds = data,    
+            avatar_url = Config.WebHook['avatar'],
+            username = Config.ServerName
+        }), {['Content-Type'] = 'application/json'})
+    else
+        local webhook = WebhookName
+        if not webhook.Color then
+            webhook.Color = 16711680
+        end
+        if not webhook.Name then
+            webhook.Name = 'MCD'
+        end
+        if not webhook.Avatar then
+            webhook.Avatar = 'https://i.ibb.co/4S77YKY/MCD.png'
+        end
+    
+        local data = {
+            {
+                ["color"] = webhook.Color,
+                ["author"] = {
+                    ["icon_url"] = '',
+                    ["name"] = webhook.Name,
+                },
+                ["description"] = text,
+                ["footer"] = {
+                    ["text"] = os.date('%d.%m.%Y [%X Uhr]'),
+                }
+            }
+        }    
+        
+        PerformHttpRequest(webhook.DiscordWebHook, function(err, text, headers) end, 'POST', json.encode({
+            embeds = data,    
+            avatar_url = webhook.Avatar,
+            username = GetCurrentResourceName()
+        }), {['Content-Type'] = 'application/json'})
+    end
 end
 
 MCD.GetLicenses = function(PlayerId)
@@ -159,6 +210,21 @@ MCD.GetJob = function(PlayerId)
     while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
     return xPlayer.getJob()
 end
+
+MCD.GetInventory = function(PlayerId)
+    local xPlayer = ESX.GetPlayerFromId(PlayerId)
+    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
+    local inventory = xPlayer.getInventory(true)
+    return inventory
+end
+
+MCD.GetLoadout = function(PlayerId)
+    local xPlayer = ESX.GetPlayerFromId(PlayerId)
+    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
+    local inventory = xPlayer.getLoadout()
+    return inventory
+end
+
 
 MCD.GetOwnedVehicles = function(PlayerId)
     local res = {}
@@ -250,7 +316,7 @@ ESX.RegisterCommand('crash', 'developer', function(xPlayer, args, showError)
             end  
             if crash then
                 MCD.Notify(xPlayer.source , _U('crashsuccess' , MCD.Function.RemoveColors(GetPlayerName(yPlayer.source))) , nil , nil , 'success')
-                TriggerClientEvent(MCD.Event('mcd_lib:Client:crash'), args.playerId.source)
+                MCD.TriggerClientEvent('mcd_lib:Client:crash' , args.playerId.source)
             else
                 MCD.Notify(xPlayer.source , 'Maus gehts dir gut? Ich hoffe das wahr versehentlich' , nil , nil , 'error')
             end
@@ -265,61 +331,98 @@ end, true, {help = 'Crash', validate = false, arguments = {
 }})
 
 local lastmoney = nil
-local moneymsg = ''
-local lastlicense = nil
-local licensemsg = ''
-local lastitem = nil
-local itemmsg = ''
-local lastmute = nil
-local mutemsg = ''
+local moneylog = {}
 
-MCD.RemoveMoney = function(account , ammount , player ,  ressourcename)
+local lastlicense = nil
+local licenselog = {}
+
+local lastitem = nil
+local itemlog = {}
+
+local lastmute = nil
+local mutelog = {}
+
+local lastweapon = nil
+local weaponlog = {}
+
+local lastjob = nil
+local joblog = {}
+
+
+MCD.RemoveMoney = function(account , amount , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+
     local _source = player
-    ammount = tonumber(ammount)
+    amount = tonumber(amount)
     
     if not account then
         account = 'money'
         print(MCD.Function.ConvertPrint(_U('error').._U('error_remmoney' , ressourcename) , true))
     end
-    if not ammount then
-        ammount = 0
+    if not amount then
+        amount = 0
         print(MCD.Function.ConvertPrint(_U('error').._U('error_remmoney2' , ressourcename) , true))
     end
     
     local xPlayer = ESX.GetPlayerFromId(_source)
     while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.removeAccountMoney(account, tonumber(ammount))
+    xPlayer.removeAccountMoney(account, tonumber(amount))
 
-    if ammount > 0 then
+    if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
-        moneymsg = moneymsg .. '\n' .. _U('Webhook_money_remove' , ammount , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+        table.insert(moneylog , {
+            remove      = true,
+            account     = account,
+            amount      = amount,
+            player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+            ressource   = ressourcename
+        })
     end
 end
 
-MCD.AddMoney = function(account , ammount , player ,  ressourcename)
+MCD.AddMoney = function(account , amount , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
-    ammount = tonumber(ammount)
+    amount = tonumber(amount)
 
     if not account then
         account = 'money'
         print(MCD.Function.ConvertPrint(_U('error').._U('error_addmoney' , ressourcename) , true))
     end
-    if not ammount then
-        ammount = 0
+    if not amount then
+        amount = 0
         print(MCD.Function.ConvertPrint(_U('error').._U('error_addmoney2' , ressourcename) , true))
     end
 
     local xPlayer = ESX.GetPlayerFromId(_source)
     while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.addAccountMoney(account, tonumber(ammount))
+    xPlayer.addAccountMoney(account, tonumber(amount))
 
-    if ammount > 0 then
+    if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
-        moneymsg = moneymsg .. '\n' .. _U('Webhook_money_add' , ammount , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+        table.insert(moneylog , {
+            remove      = false,
+            account     = account,
+            amount      = amount,
+            player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+            ressource   = ressourcename
+        })
     end
 end
 
-MCD.RemoveLicense = function(license , player , ressourcename)
+MCD.RemoveLicense = function(license , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
     
     if not license then
@@ -334,10 +437,20 @@ MCD.RemoveLicense = function(license , player , ressourcename)
     })
     
     lastlicense = MCD.GetCurrentTime()
-    licensemsg = licensemsg .. '\n' .. _U('Webhook_license_remove' , license , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+    table.insert(licenselog , {
+        remove      = true,
+        license     = license,
+        player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+        ressource   = ressourcename
+    })
 end
 
-MCD.AddLicense = function(license , player , ressourcename)
+MCD.AddLicense = function(license , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
 
     if not license then
@@ -352,10 +465,20 @@ MCD.AddLicense = function(license , player , ressourcename)
     }, function(result)end)
 
     lastlicense = MCD.GetCurrentTime()
-    licensemsg = licensemsg .. '\n' .. _U('Webhook_license_add' , license , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+    table.insert(licenselog , {
+        remove      = false,
+        license     = license,
+        player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+        ressource   = ressourcename
+    })
 end
 
-MCD.RemoveItem = function(item , count , player , ressourcename)
+MCD.RemoveItem = function(item , count , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
     count = tonumber(count)
 
@@ -374,11 +497,22 @@ MCD.RemoveItem = function(item , count , player , ressourcename)
 
     if count > 0 then
         lastitem = MCD.GetCurrentTime()
-        itemmsg = itemmsg .. '\n' .. _U('Webhook_money_remove' , count , item , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+        table.insert(itemlog , {
+            remove      = true,
+            item        = item,
+            count       = count,
+            player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+            ressource   = ressourcename
+        })
     end 
 end
 
-MCD.AddItem = function(item , count , player , ressourcename)
+MCD.AddItem = function(item , count , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
     count = tonumber(count)
 
@@ -397,24 +531,43 @@ MCD.AddItem = function(item , count , player , ressourcename)
 
     if count > 0 then
         lastitem = MCD.GetCurrentTime()
-        itemmsg = itemmsg .. '\n' .. _U('Webhook_item_add' , count , item , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+        table.insert(itemlog , {
+            remove      = false,
+            item        = item,
+            count       = count,
+            player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+            ressource   = ressourcename
+        })
     end 
 end
 
-MCD.MutePlayer = function(toggle , player , ressourcename)
+MCD.MutePlayer = function(toggle , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
     local _source = player
     
     MumbleSetPlayerMuted(_source,toggle)
-    TriggerClientEvent(MCD.Event('mcd_lib:Client:CheckMute'), _source)
-    local m = '+'
-    if not toggle then
-        m = '-'
-    end
+    MCD.TriggerClientEvent('mcd_lib:Client:CheckMute' , _source)
     lastmute =MCD.GetCurrentTime()
-    mutemsg = mutemsg .. '\n'.. m .. _U('Webhook_mute' , MCD.Function.RemoveColors(GetPlayerName(_source)) , toggle , ressourcename)
+    table.insert(mutelog , {   
+        toggle      = toggle,
+        player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+        ressource   = ressourcename
+    })
 end
 
-MCD.RemoveVehicle = function(plate , ressourcename)
+MCD.RemoveVehicle = function(plate , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
+    if Config.MCDPlateSafe then
+        plate = plate:gsub(' ' , '_')
+    end
     local msg = _U('error')
     local r = false
     if RemovePlate(plate) then
@@ -426,17 +579,31 @@ MCD.RemoveVehicle = function(plate , ressourcename)
     return r
 end
 
-MCD.SetJob = function(Job , Grade , player , ressourcename)
-    local _source = player
-
+MCD.SetJob = function(Job , Grade , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
+    local _source = player    
     local xPlayer = ESX.GetPlayerFromId(_source)
     while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
     xPlayer.setJob(Job, Grade)
 
-    MCD.SendToDiscord(_U('setjob', xPlayer.getName() , Job ,_source) , ressourcename , 'default')
+    lastjob = MCD.GetCurrentTime()
+    table.insert(joblog , {
+        player      = MCD.Function.RemoveColors(GetPlayerName(_source)),
+        job         = Job,
+        grade       = Grade,
+        ressource   = ressourcename
+    })
 end
 
 function RemovePlate(plate)
+    if Config.MCDPlateSafe then
+        plate = plate:gsub(' ' , '_')
+    end
+
     local ret = nil
     MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate ', {['@plate']=plate:gsub('% ' , '')}, function(doesexist)
         if #doesexist == 1 then
@@ -474,26 +641,22 @@ MCD.Notify = function(player , msg , header , time , notificationtype)
     end
 
     if Config.ReplaceColorCodes and not Config.RemoveColorCodes then       
-        TriggerClientEvent(MCD.Event('mcd_lib:Client:Notify') , player , MCD.ConvertColor(msg) , MCD.ConvertColor(header)  , time , notificationtype)
+        MCD.TriggerClientEvent('mcd_lib:Client:Notify' , player , MCD.ConvertColor(msg) , MCD.ConvertColor(header)  , time , notificationtype)
     else
         if Config.RemoveColorCodes then
-            TriggerClientEvent(MCD.Event('mcd_lib:Client:Notify') , player , MCD.Function.RemoveColors(msg) , MCD.Function.RemoveColors(header) , time , notificationtype)
+            MCD.TriggerClientEvent('mcd_lib:Client:Notify' , player , MCD.Function.RemoveColors(msg) , MCD.Function.RemoveColors(header) , time , notificationtype)
         else
-            TriggerClientEvent(MCD.Event('mcd_lib:Client:Notify') , player , msg , header  , time , notificationtype)
+            MCD.TriggerClientEvent('mcd_lib:Client:Notify' , player , msg , header  , time , notificationtype)
         end
     end
 end
 
-MCD.SetCoords = function(coords , playerId)
-    TriggerClientEvent(MCD.Event('mcd_lib:Client:SetCoords'), playerId, coords)
-end
-
-MCD.GetCurrentTime = function()
-    return os.clock()
+MCD.SetCoords = function(coords , withvehicle ,  playerId)
+    MCD.TriggerClientEvent('mcd_lib:Client:SetCoords' , playerId, coords , withvehicle)
 end
 
 MCD.SetPlate = function(vehicle , plate)
-    TriggerClientEvent(MCD.Event('mcd_lib:Client:SetPlate'), -1 , vehicle , string.upper(plate))
+    MCD.TriggerClientEvent('mcd_lib:Client:SetPlate' , -1 , vehicle , string.upper(plate))
 end
 
 MCD.IsAllowed = function(playerid, lowestgroup)
@@ -530,7 +693,7 @@ MCD.SendNotifyToJob = function(job , msg , header , time , notificationtype)
         notifytype = notificationtype,
         simplefy = true,
     }
-    TriggerClientEvent(MCD.Event('mcd_lib:Client:AdvancedNotify'), -1 , nil , nil ,nil , data)
+    MCD.TriggerClientEvent('mcd_lib:Client:AdvancedNotify' , -1 ,data)
 end
 
 MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconType , flash , saveToBrief , hudColorIndex)
@@ -546,7 +709,7 @@ MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconTy
         hudColorIndex = hudColorIndex,
         simplefy = false,
     }
-    TriggerClientEvent(MCD.Event('mcd_lib:Client:AdvancedNotify'), -1 , nil , nil ,nil , data)
+    MCD.TriggerClientEvent('mcd_lib:Client:AdvancedNotify' , -1 ,data)
 end
 
 Citizen.CreateThread(function()
@@ -565,158 +728,6 @@ Citizen.CreateThread(function()
     end
 end)
 --------------------------------------------------------------------------------------------------------
-function GetScriptData(script)
-    local ret
-    PerformHttpRequest('https://versions.mauscd.de/main.php' , function(status , version)
-        if status == 200 then
-            ret = json.decode(version)
-        else
-            print(MCD.Function.ConvertPrint('[~o~ERROR~s~] Version coudnt be Checked (~r~Url not reachable~s~)'))
-            ret = false
-        end
-    end, 'GET' , json.encode({script = script}))
-    while ret == nil do Citizen.Wait(10) end
-    return ret
-end
-
-local versions = {
-    ['mcd_lib'] = GetResourceMetadata(GetCurrentResourceName(), 'version', 0):match('%d%.%d+%.%d+'),
-}
-
-local checker = {}
-local check = {}
-
-function CompareVersion(current , latest)
-    local cmajor, cminor, cpatch = string.match(current, "(%d+)%.(%d+)%.(%d+)")
-    local lmajor, lminor, lpatch = string.match(latest, "(%d+)%.(%d+)%.(%d+)")
-    if tonumber(cmajor) >= tonumber(lmajor) then
-        if tonumber(cminor) >= tonumber(lminor) then
-            if tonumber(cpatch) >= tonumber(lpatch) then
-                return true
-            else
-                return false
-            end
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
-
-local buyed = {}
-Citizen.CreateThread(function()
-    Citizen.Wait(7500)
-    local c = 0
-    for a,a in pairs(buyed) do c = c + 1 end
-    if c > 0 then
-        local text = '~r~[--------------] ~r~❤~s~Thanks for Buying~r~❤ [--------------]~s~'
-        for script,version in pairs(buyed) do
-            text = text .. '\n\t[~y~'..script..'~s~] [~b~Version ~p~' .. version .. '~s~]'
-        end
-        text = text .. '\n~r~[----------------------------------------------------]'
-        print(MCD.Function.ConvertPrint(text))
-    end
-end)
-
-function VersionState(ressourcename , scriptname , first)
-    local currentVersion = GetResourceMetadata(ressourcename, 'version', 0):match('%d%.%d+%.%d+')
-    local scriptdata = GetScriptData(scriptname)
-    local lastVersion = scriptdata.version
-    local url = scriptdata.url
-    if lastVersion and currentVersion then
-        versions[scriptname] = currentVersion    
-        if CompareVersion(currentVersion , lastVersion) then
-            if first then
-                table.insert(check , {
-                    script = scriptname,
-                    updated = true,
-                })
-            else
-                print(MCD.Function.ConvertPrint('[~y~'..scriptname..'~s~] ~g~✔ Up To Date'))
-            end
-        else
-            if first then
-                table.insert(check , {
-                    script = scriptname,
-                    updated = false,
-                    current = currentVersion,
-                    last = lastVersion,
-                    url = url,
-                })
-            else
-                print(MCD.Function.ConvertPrint('[~y~'..scriptname..'~s~] ~o~ ❗❗Out Dated❗~s~\n\t\t[~b~Current~s~]: ~r~' .. currentVersion .. '~s~\n\t\t[~b~Latest~s~]:  ~g~' .. lastVersion .. '~s~\n\t\t[~b~Update~s~]:🔗~p~' .. url))
-            end
-        end
-    end
-end
-
-local lastupdate = MCD.GetCurrentTime()
-local firstmsg = false
-function CheckForUpdates()
-    lastupdate =  MCD.GetCurrentTime()
-    for i,p in ipairs(checker) do
-        VersionState(p.ressourcename , p.script , true)
-    end
-    
-    if #check > 0 then
-        local text = '~c~[--------------------] ~s~Versions ~c~[--------------------]'
-        for i,p in ipairs(check) do
-            if p.updated then
-                text = text .. '\n🟢[~y~'..p.script..'~s~] ~g~✔ Up To Date'
-            else
-                text = text .. '\n🔴[~y~'..p.script..'~s~]~o~ ❗❗Out Dated❗❗~s~\n\t\t[~b~Current~s~]: ~r~' .. p.current .. '~s~\n\t\t[~b~Latest~s~]:  ~g~' .. p.last .. '~s~\n\t\t[~b~Update~s~]:🔗~p~' .. p.url
-            end
-        end
-        text = text .. '\n~c~[----------------------------------------------------]'
-        print(MCD.Function.ConvertPrint(text))
-        check = {}
-    end
-end
-
-MCD.AddUpdateChecker = function(scriptname , ressourcename)
-    if scriptname and ressourcename then
-        if GetResourceState(ressourcename) ~= 'missing' and GetResourceState(ressourcename) ~= 'unknown' then
-            local found = false
-            for i,p in ipairs(checker) do
-                if p.script == scriptname then
-                    found = true
-                    break 
-                end
-            end
-            if not found then
-                table.insert(checker , {script = scriptname , ressourcename = ressourcename})
-            end
-            if MCD.Math.TimeDifference(lastupdate , MCD.GetCurrentTime()) > 5 and firstmsg then
-                Citizen.SetTimeout(0, function()
-                    CheckForUpdates()
-                end)                  
-            end
-        end
-    end
-end
-
-MCD.Authenticate = function(scriptname , version)
-    buyed[scriptname] = version
-end
-
-Citizen.CreateThread(function()
-    MCD.AddUpdateChecker('mcd_lib', GetCurrentResourceName())    
-    Citizen.Wait(5*1000)
-    CheckForUpdates()
-    firstmsg = true
-    while true do
-        Citizen.Wait(60 * 60 * 1000)
-        CheckForUpdates()
-    end
-end)
-
-RegisterCommand('mcd_version', function()
-    for script,version in pairs(versions) do
-        print(MCD.Function.ConvertPrint('[~y~'..script..'~s~] Version: ~b~'..version))
-    end
-end)
-
 MCD.GetPlayerName = function(playersrc)
     return MCD.Function.RemoveColors(GetPlayerName(playersrc))
 end
@@ -764,62 +775,119 @@ MCD.HasJob = function(id , Jobs)
     end
 end
 
-MCD.ItemName = function(item)
-    return ESX.GetItemLabel(item)
-end
-
 AddEventHandler('onResourceStop', function(resourceName)
     if (GetCurrentResourceName() == resourceName) then
         newkey()
+        MCD.SaveTable('mcd_lib:BanTable' , bans)
         MCD.SaveTables()         
     end
 end)
 AddEventHandler('txAdmin:events:serverShuttingDown', function()
     newkey()
+    MCD.SaveTable('mcd_lib:BanTable' , bans)
     Citizen.Wait(1000)
     MCD.SaveTables()
 end)
 
 Citizen.CreateThread(function()
-    local sleep = 500
+    local sleep = 1000
     while true do Citizen.Wait(sleep)
         if lastmoney then
             if MCD.Math.TimeDifference(lastmoney ,MCD.GetCurrentTime()) > 5 then
-                MCD.STDiscord('```diff'..moneymsg..'\n```' , Config.WebHook['money'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['money'].Name, Config.WebHook['avatar'])
-                moneymsg = ''
                 lastmoney = nil
+                local text = ''
+                for i,p in ipairs(moneylog) do
+                    if p.remove then
+                        text = text .. MCD.Function.String(_U('Webhook_money_remove' , p.amount , p.account , p.player , p.ressource))..'\n'
+                    else   
+                        text = text .. MCD.Function.String(_U('Webhook_money_add' , p.amount , p.account , p.player , p.ressource))..'\n'
+                    end
+                end
+                moneylog = {}
+                MCD.SendLog('money' , text)
             end
         end
 
         if lastlicense then
             if MCD.Math.TimeDifference(lastlicense ,MCD.GetCurrentTime()) > 5 then
-                MCD.STDiscord('```diff'..licensemsg..'\n```' , Config.WebHook['licenses'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['licenses'].Name, Config.WebHook['avatar'])
-                licensemsg = ''
                 lastlicense = nil
+                local text = ''
+                for i,p in ipairs(licenselog) do
+                    if p.remove then
+                        text = text .. _U('Webhook_license_add' , p.license , p.player , p.ressource)..'\n'
+                    else   
+                        text = text .. _U('Webhook_license_remove' , p.license , p.player , p.ressource)..'\n'
+                    end
+                end
+                licenselog = {}
+                MCD.SendLog('licenses' , text)
             end
         end
 
         if lastitem then
             if MCD.Math.TimeDifference(lastitem ,MCD.GetCurrentTime()) > 5 then
-                MCD.STDiscord('```diff'..itemmsg..'\n```' , Config.WebHook['item'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['item'].Name, Config.WebHook['avatar'])
-                itemmsg = ''
                 lastitem = nil
+                local text = ''
+                for i,p in ipairs(itemlog) do
+                    if p.remove then
+                        text = text .. _U('Webhook_item_remove' , p.count , p.item , p.player , p.ressource)..'\n'
+                    else   
+                        text = text .. _U('Webhook_item_add' , p.count , p.item , p.player , p.ressource)..'\n'
+                    end
+                end
+                itemlog = {}
+                MCD.SendLog('item' , text)
             end
         end
 
         if lastmute then
             if MCD.Math.TimeDifference(lastmute ,MCD.GetCurrentTime()) > 5 then
-                MCD.STDiscord('```diff'..mutemsg..'\n```' , Config.WebHook['mute'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['mute'].Name, Config.WebHook['avatar'])
-                mutemsg = ''
                 lastmute = nil
+                local text = ''
+                for i,p in ipairs(mutelog) do
+                    if p.toggle then
+                        text = text .. _U('Webhook_mute_on' ,  p.player , p.ressource)..'\n'
+                    else   
+                        text = text .. _U('Webhook_mute_off' , p.player , p.ressource)..'\n'
+                    end
+                end
+                mutelog = {}
+                MCD.SendLog('mute' , text)
+            end
+        end
+
+        if lastweapon then
+            if MCD.Math.TimeDifference(lastweapon ,MCD.GetCurrentTime()) > 5 then
+                lastweapon = nil
+                local text = ''
+                for i,p in ipairs(weaponlog) do
+                    if p.remove then
+                        text = text .. _U('Webhook_weapon_remove' , p.weapon , p.player , p.ressource)..'\n'
+                    else   
+                        text = text .. _U('Webhook_weapon_add' , p.weapon , p.ammo , p.player , p.ressource)..'\n'
+                    end
+                end
+                weaponlog = {}
+                MCD.SendLog('weapon' , text)
+            end
+        end
+
+        if lastjob then
+            if MCD.Math.TimeDifference(lastjob ,MCD.GetCurrentTime()) > 5 then
+                lastjob = nil
+                local text = ''
+                for i,p in ipairs(joblog) do
+                    text = text .. _U('Webhook_setjob' , p.player , p.job , p.grade , p.ressource)..'\n'
+                end
+                joblog = {}
+                MCD.SendLog('jobs' , text)
             end
         end
     end
 end)
 
 Citizen.CreateThread(function()
-    MCD.SendToDiscord('MCD Lib started' , GetCurrentResourceName() , 'default')
-    print(MCD.Function.ConvertPrint('~s~[~y~'..GetCurrentResourceName()..'~s~][~b~INFO~s~]\t~g~MCD Lib started' , false))
+    print(MCD.Function.ConvertPrint('~s~[~y~'..GetCurrentResourceName()..'~s~][~b~INFO~s~]\t~g~MCD Lib started' , false))    
 end)
 
 local hex2bin = {["0"] = "0000",["1"] = "0001",["2"] = "0010",["3"] = "0011",["4"] = "0100",["5"] = "0101",["6"] = "0110",["7"] = "0111",["8"] = "1000",["9"] = "1001",["a"] = "1010",["b"] = "1011",["c"] = "1100",["d"] = "1101",["e"] = "1110",["f"] = "1111"} function Hex2Bin(s)local ret = ""local i = 0 for i in string.gmatch(s, ".") do i = string.lower(i) ret = ret..hex2bin[i] end return ret end function Bin2Dec(s)local num = 0 local ex = string.len(s) - 1 local l = 0 l = ex + 1 for i = 1, l do b = string.sub(s, i, i) if b == "1" then num = num + 2^ex end ex = ex - 1 end return string.format("%u", num) end function Hex2Dec(s)local s = Hex2Bin(s)return Bin2Dec(s)end
@@ -882,226 +950,47 @@ end
 
 RegisterNetEvent('esx:playerSaved')
 AddEventHandler('esx:playerSaved', function(playerId)
-    TriggerClientEvent(MCD.Event('SavedPlayer'), playerId)
+    MCD.TriggerClientEvent('SavedPlayer' , playerId)
 end)
 
-MCD.BanPlayer = function(playerid , reason , duration)
-    local pname = GetPlayerName(playerid)
-    local banid = Ban(playerid , duration , reason)
+MCD.SetMoney = function(account , amount , player ,  resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
     
-    print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~]' .. _U('banned_no_res' , pname , reason , banid) , true))
-    MCD.STDiscord(_U('Webhook_ban' , pname  ,reason , duration , banid), Config.WebHook['banning'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['banning'].Name, Config.WebHook['avatar'])
-end
-connects = {}
-AddEventHandler('playerConnecting', function(playername, setCallback, deferrals)
-    local src = source
-    local a = MCD.Identifier(src)
-    local now = os.time(os.date('*t'))
-    local reject
-    local f = false
-    local r = ''
-    local bi = ''
-
-    deferrals.update('Checking Banlist')
-    local points = 0
-    MySQL.Async.fetchAll('SELECT * FROM MCD_Banned ', {}, function(result)
-        for i,p in ipairs(result) do
-            local pnt = '' for a=0, points do pnt = pnt .. '.' end points = points + 1 if points > 3 then points = 0 end
-            deferrals.update('Checking Banlist'..pnt)
-
-            local found = false
-            local ids = json.decode(p.ids)
-            if ids.steamid and a.steamid then if ids.steamid == a.steamid then found = true end end
-            if ids.license and a.license then if ids.license == a.license then found = true end end
-            if ids.discord and a.discord then if ids.discord == a.discord then found = true end end
-            if ids.xbl and a.xbl then if ids.xbl == a.xbl then found = true end end
-            if ids.liveid and a.liveid then if ids.liveid == a.liveid then found = true end end
-            if ids.ip and a.ip then if ids.ip == a.ip then found = true end end
-
-            if found then
-                local u = tonumber(p.unban)
-                if u ~= 0 then
-                    local diff = u - now
-                    if diff > 0 then
-                        local d = os.date("*t", u)
-                        local date = d.day .. '.'..d.month..'.'..d.year .. '\t' .. d.hour..':'..d.min .. 'Uhr'
-                        reject =  _U('banned_join' , p.reason, date , p.banid) 
-                    end
-                else
-                    reject =  _U('banned_join' , p.reason, 'Never' , p.banid) 
-                end
-                r = p.reason
-                bi = p.banid
-            end
-        end
-        f = true
-    end)
-    while not f do Citizen.Wait(1) end
-
-    if reject then
-        print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] [~b~INFO~s~] ' .. playername .. '~s~ tried to Join but is ~r~Banned~s~ for ~y~' .. r .. '~s~ | BanId: ~c~'..bi , true) )
-        deferrals.done(reject)
-        CancelEvent()
-    else
-        connects[playername] = MCD.GetCurrentTime()
-        print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] [~b~INFO~s~] ' .. playername .. '~s~ Is connecting' , true))
-        deferrals.done()
-    end
-end)
-
-Citizen.CreateThread(function()
-    print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] Checking for OutDated ~r~Banns~s~'))
-
-    local f = false
-    local found = 0
-    local now = os.time(os.date('*t'))
-    MySQL.Async.fetchAll('SELECT * FROM MCD_Banned ', {}, function(result)
-        for i,p in ipairs(result) do
-            local u = tonumber(p.unban)
-            if u ~= -1 then
-                local diff = u - now
-                if diff <= 0 then
-                    found = found + 1
-                    MySQL.Async.execute('DELETE FROM MCD_Banned WHERE banid = @banid', {
-                        ['@banid'] = p.banid,
-                    })
-                end
-            end
-        end
-        f = true
-    end)
-
-    while not f do Citizen.Wait(1) end
-    print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] Found ~b~'..found..'~s~ and ~r~deleted~s~ them'))
-end)
-
-RegisterCommand('mcdunban', function(playerId, args)
-    local banid = tonumber(args[1])
-    if playerId ~= 0 then
-        if MCD.IsAllowed(playerId, Config.UnbanPermission) then
-            Unban(banid , GetPlayerName(playerId))
-        else
-            MCD.Notify(playerId , _U('no_perm') , nil , nil , 'error')
-        end
-    else
-        if Config.AllowConsole then
-            Unban(banid , 'Console')
-        else
-            print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('no_perm')))
-        end
-    end
-end)
-RegisterCommand('mcdban', function(playerId, args)
-    if args[1] == 'me' then args[1] = playerId end
-    local target = tonumber(args[1])
-    local duration = tonumber(args[2])
-    table.remove(args , 1) table.remove(args , 1)
-    local reason = table.concat(args, ' ')
-
-    local a = false
-    if playerId ~= 0 then
-        if MCD.IsAllowed(playerId, Config.UnbanPermission) then
-            a = MCD.Function.RemoveColors(GetPlayerName(playerId))            
-        else
-            MCD.Notify(playerId , _U('no_perm') , nil , nil , 'error')
-        end
-    else
-        if Config.AllowConsole then
-            a = 'Console'
-        else
-            print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('no_perm')))
-        end
-    end
-
-    if a then
-
-        if ESX.GetPlayerFromId(target) then
-            if duration then
-                local tn = GetPlayerName(target)
-                local banid = Ban(target , duration , reason , a)
-                
-                print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] [~b~INFO~s~] '.._U('banned' , a , tn , reason , banid)))
-                MCD.STDiscord(_U('Webhook_client_ban' , a , pname  ,reason , duration , banid), Config.WebHook['banning'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['banning'].Name, Config.WebHook['avatar'])
-            else
-                if a == 'Console' then
-                    print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('no_duration') .. ' \t' .. _U('ban_syntax')))
-                else
-                    MCD.Notify(playerId , _U('no_duration') .. ' \t' .. _U('ban_syntax') ,nil , nil , 'error')
-                end
-            end
-        else
-            if a == 'Console' then
-                print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('player_doesnt_exist' , target)))
-            else
-                MCD.Notify(playerId , _U('player_doesnt_exist' , target) ,nil , nil , 'error')
-            end
-        end
-
-    end
-end)
-
-Ban = function(playerid , duration , reason , operator)
-    local banid
-    local unbanned =  0
-    if duration ~= 0 then
-        unbanned = os.time(os.date('*t')) + duration*60
-    end
-
-    MySQL.Async.insert('INSERT INTO MCD_Banned (ids , unban , reason) VALUES (@ids , @unban , @reason)', {
-        ['@ids'] = json.encode(MCD.Identifier(playerid)),
-        ['@unban'] = unbanned,
-        ['@reason'] = reason,
-    }, function(result)
-        banid = result
-        if operator then
-            DropPlayer(playerid, _U('ban_kick' , operator , reason , banid))
-        else
-            DropPlayer(playerid, _U('ban_kick_no', reason , banid))
-        end       
-        
-    end)
-
-    while not banid do Citizen.Wait(1) end
-    return banid
-end 
-
-Unban = function(banid , playername)
-    MySQL.Async.execute('DELETE FROM MCD_Banned WHERE banid = @banid', {
-        ['@banid'] = banid,
-    }, function(result)
-        if result == 1 then
-            print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~] [~b~INFO~s~] '.._U('unbanned' , playername , banid) , true))
-
-            MCD.STDiscord(_U('Webhook_unban' , playername , banid), Config.WebHook['banning'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['banning'].Name, Config.WebHook['avatar'])
-        else
-            print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('candt_find_ban' , banid)))
-        end
-    end)    
-end
-
-MCD.SetMoney = function(account , ammount , player ,  ressourcename)
     local _source = player
-    ammount = tonumber(ammount)
+    amount = tonumber(amount)
     
     if not account then
         account = 'money'
         print(MCD.Function.ConvertPrint(_U('error').._U('error_setmoney' , ressourcename) , true))
     end
-    if not ammount then
-        ammount = 0
+    if not amount then
+        amount = 0
         print(MCD.Function.ConvertPrint(_U('error').._U('error_setmoney2' , ressourcename) , true))
     end
     
     local xPlayer = ESX.GetPlayerFromId(_source)
     while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.setAccountMoney(account, tonumber(ammount))
-    if ammount > 0 then
+    xPlayer.setAccountMoney(account, tonumber(amount))
+    if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
-        moneymsg = moneymsg .. '\n' .. _U('Webhook_money_set' , ammount , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
+        moneymsg = moneymsg .. '\n' .. _U('Webhook_money_set' , amount , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
     end
 end
 
-MCD.AddVehicle = function(plate , model , plyid ,  ressourcename)
+MCD.AddVehicle = function(plate , model , plyid , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
+    local mcdplate = plate
+    if Config.MCDPlateSafe then
+        mcdplate = plate:gsub(' ' , '_')
+    end
+
     local r , finish = false , false
     local _source = source
     local msg = _U('error')
@@ -1110,7 +999,7 @@ MCD.AddVehicle = function(plate , model , plyid ,  ressourcename)
         local xPlayer = ESX.GetPlayerFromId(plyid)        
         MySQL.Async.execute('INSERT INTO owned_vehicles (owner, plate, vehicle ) VALUES (@owner, @plate, @vehicle)', {
             ['@owner']   = xPlayer.identifier,
-            ['@plate']   = plate,
+            ['@plate']   = mcdplate,
             ['@vehicle'] = json.encode({model = model, plate = plate})
         }, function(rowsChanged)
             if tonumber(rowsChanged) == 1 then
@@ -1135,7 +1024,7 @@ RegisterCommand('sudo', function(source , args)
         if source ~= 0 then
             if MCD.IsAllowed(source , Config.SudoCommand.group) then
                 if id then
-                    TriggerClientEvent(MCD.Event('mcd_lib:Client:Sudo'), id , command)
+                    MCD.TriggerClientEvent('mcd_lib:Client:Sudo' , id , command)
                 else
                     MCD.Notify(source , _U('sudo_syntax') , nil , nil , 'error')
                 end
@@ -1145,7 +1034,7 @@ RegisterCommand('sudo', function(source , args)
         else
             if Config.SudoCommand.console then
                 if id then
-                    TriggerClientEvent(MCD.Event('mcd_lib:Client:Sudo'), id , command)
+                    MCD.TriggerClientEvent('mcd_lib:Client:Sudo' , id , command)
                 else
                     print(MCD.Function.ConvertPrint(_U('error') .. _U('sudo_syntax')))  
                 end
@@ -1158,91 +1047,8 @@ RegisterCommand('sudo', function(source , args)
     end
 end)
 
-local kicks = {}
-MCD.Kick = function(playerid , reason , source)
-    local banned = false
-    if Config.AutoBanAfterKicks > 0 then
-        local ids = MCD.Identifier(playerid)
-        table.insert(kicks , {ids = ids,reason = reason})
-        local count = 0
-        for i,p in ipairs(kicks) do
-            local a = p.ids
-            local found = false
-            if ids.steamid and a.steamid then if ids.steamid == a.steamid then found = true end end
-            if ids.license and a.license then if ids.license == a.license then found = true end end
-            if ids.discord and a.discord then if ids.discord == a.discord then found = true end end
-            if ids.xbl and a.xbl then if ids.xbl == a.xbl then found = true end end
-            if ids.liveid and a.liveid then if ids.liveid == a.liveid then found = true end end
-            if ids.ip and a.ip then if ids.ip == a.ip then found = true end end
-            if found then
-                count = count + 1
-            end
-        end
-        if count >= Config.AutoBanAfterKicks then
-            banned = true
-            MCD.BanPlayer(playerid , 'Autoban for to many Kicks' , Config.AutoBanDuration)            
-        end
-    end
-    if not banned then
-        if source then
-            local txt = _U('kicked_player' , GetPlayerName(source) , GetPlayerName(playerid) , reason)
-            print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~]' ..txt , true))
-            MCD.STDiscord(txt , Config.WebHook['banning'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['banning'].Name, Config.WebHook['avatar'])
-        else
-            local txt = _U('kicked_script' , GetPlayerName(playerid) , reason)
-            print(MCD.Function.ConvertPrint('[~o~BANMANAGER~s~]' ..txt , true))
-            MCD.STDiscord(txt , Config.WebHook['banning'].DiscordWebHook , Config.WebHook['color'] , Config.WebHook['banning'].Name, Config.WebHook['avatar'])
-        end
-        DropPlayer(playerid, reason)
-    end
-end
-
-RegisterCommand('mcdkick', function(playerId, args)
-    if args[1] == 'me' then args[1] = playerId end
-    local target = tonumber(args[1])
-    table.remove(args , 1)
-    local reason = table.concat(args, ' ')
-
-    local a = false
-    if playerId ~= 0 then
-        if MCD.IsAllowed(playerId, Config.UnbanPermission) then
-            a = MCD.Function.RemoveColors(GetPlayerName(playerId))            
-        else
-            MCD.Notify(playerId , _U('no_perm') , nil , nil , 'error')
-        end
-    else
-        if Config.AllowConsole then
-            a = 'Console'
-        else
-            print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('no_perm')))
-        end
-    end
-
-    if a then
-
-        if ESX.GetPlayerFromId(target) then
-            MCD.Kick(target , reason , playerId)
-        else
-            if a == 'Console' then
-                print(MCD.Function.ConvertPrint("[~o~BANMANAGER~s~] [~r~ERROR~s~] " .. _U('player_doesnt_exist' , target)))
-            else
-                MCD.Notify(playerId , _U('player_doesnt_exist' , target) ,nil , nil , 'error')
-            end
-        end
-
-    end
-end)
-
 MCD.SaveTable = function(tablename , data)
     savedtables[tablename] = json.encode(data)
-end
-
-MCD.GetTable = function(tablename)
-    if savedtables[tablename] then
-        return json.decode(savedtables[tablename])
-    else
-        return {}
-    end
 end
 
 MCD.SaveTables = function()
@@ -1268,8 +1074,7 @@ MCD.SaveTables = function()
 end
 
 MCD.HasWeapon = function(playerid , weapons)
-    local xPlayer = ESX.GetPlayerFromId(playerid)
-    local loadout = xPlayer.getLoadout()
+    local loadout = MCD.GetLoadout(playerid)
     local hasweapon = false
     if type(weapons) == 'string' or type(weapons) == 'number' then
         local hash = weapons
@@ -1295,19 +1100,174 @@ MCD.HasWeapon = function(playerid , weapons)
     return hasweapon
 end
 
-MCD.LiceneName = function(license)
-    local ret
-    MySQL.Async.fetchAll('SELECT * FROM licenses WHERE type = "' .. license .. '"', {}, function(result)
-        if result[1] then
-            ret = result[1].label
-        else
-            ret = 'Error'
-        end 
-    end)
-    while not ret do Citizen.Wait(5) end
-    return ret
-end
-
 RegisterCommand('savetables', function()
     MCD.SaveTables()
 end, true)
+
+MCD.RemoveWeapon = function(weapon ,player, resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
+    local _source = player
+    weapon = string.upper(weapon)
+    
+    local xPlayer = ESX.GetPlayerFromId(_source)
+    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
+    xPlayer.removeWeapon(weapon)
+    
+    lastweapon = MCD.GetCurrentTime()
+    table.insert(weaponlog , {
+        removed     = true,
+        weapon      = weapon,
+        player      = MCD.GetPlayerName(_source),
+        ressource   = ressourcename
+    })
+end
+
+MCD.AddWeapon = function(weapon , ammo , player , resname)
+    local ressourcename = GetInvokingResource()
+    if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
+        ressourcename = resname
+    end
+    
+    local _source = player
+    ammo = tonumber(ammo)
+    weapon = string.upper(weapon)
+    
+    if not ammo then
+        ammo = 0
+        print(MCD.Function.ConvertPrint(_U('error').._U('error_addweapon2' , ressourcename) , true))
+    end
+    
+    local xPlayer = ESX.GetPlayerFromId(_source)
+    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
+    xPlayer.addWeapon(weapon, ammo)
+    
+    if ammo > 0 then
+        lastweapon = MCD.GetCurrentTime()
+        table.insert(weaponlog , {
+            removed     = false,
+            weapon      = weapon,
+            ammo        = ammo,
+            player      = MCD.GetPlayerName(_source),
+            ressource   = ressourcename
+        })
+    end 
+end
+
+MCD.SendLog('default' , 'MCD Lib successfull started')
+
+
+local Prices = {}
+MCD.RegisterPriceChange = function(name , min , max , stepmin, stepmax)
+    local res = GetInvokingResource()
+
+    local found
+    for i,p in ipairs(Prices) do
+        if p.res == res then
+            if p.name == name then
+                found = i
+            end
+        end
+    end
+
+    if not found then
+        local minimum = math.floor(min*100)
+        local maximum = math.floor(max*100)
+        local price = ESX.Math.Round(math.random(minimum , maximum)/100, 1)
+        table.insert(Prices , {
+            name = name, 
+            min = min,
+            max = max,
+            stepmin = stepmin,
+            stepmax = stepmax,
+            price = price
+        })
+        return price
+    else
+        return Prices[found].price
+    end
+end
+
+MCD.GetPrice = function(name , ressource)
+    local res = GetInvokingResource()
+    if ressource then
+        res = ressource
+    end
+
+    local found
+    for i,p in ipairs(Prices) do
+        if p.res == res then
+            if p.name == name then
+                found = i
+            end
+        end
+    end
+
+    if not found then
+        return nil
+    else
+        return Prices[found].price
+    end
+end
+
+MCD.ForcePriceChange = function(name)
+    local res = GetInvokingResource()
+
+    local found
+    for i,p in ipairs(Prices) do
+        if p.res == res then
+            if p.name == name then
+                found = i
+            end
+        end
+    end
+
+    if not found then
+        return nil
+    else
+        local p = Prices[found]
+        local minus = math.random(0,1) == 1
+
+        local minimum = math.floor(p.stepmin*100)
+        local maximum = math.floor(p.stepmax*100)
+        local step = ESX.Math.Round(math.random(minimum , maximum)/100, 1)        
+
+        local newprice = 0
+        if minus then
+            newprice = p.price - step
+            
+            if newprice < p.min then
+                newprice = p.min
+            end
+        else
+            newprice = p.price + step
+            if newprice > p.max then
+                newprice = p.max
+            end
+        end
+
+        return newprice
+    end
+end
+
+AddEventHandler('onResourceStop', function(resourceName)   
+    for event,data in pairs(events) do
+        for i,p in ipairs(data) do
+            if p.ressource == resourceName then
+                table.remove(data , i)
+            end 
+        end
+    end
+end)
+
+local dimensions = {}
+MCD.NormalDimension = function(player)
+    SetPlayerRoutingBucket(player, 0)
+end
+MCD.SingleDimension = function(player)
+    dimensions[#dimensions+1] = true
+    SetPlayerRoutingBucket(player, #dimensions)
+end

@@ -1,13 +1,13 @@
 Config = {}
 
-Config.Locale = 'de'
-Config.ServerName = 'MRP'
+Config.Locale = 'en'
+Config.ServerName = 'Servername'
 
-Config.ServerLogo = 'https://cdn.discordapp.com/attachments/982381663906562098/989575093489401876/newliferplogoanimationtransparent.gif'
+Config.ServerLogo = 'logo URL'
+Config.DiscordLink = 'https://discord.gg/123abc'
 
 Config.defaultBinding = 'F6'
 Config.defaultMapper = 'KEYBOARD'
-Config.UsingOkokBilling = false
 
 Config.PrintDiscord = false
 
@@ -23,7 +23,14 @@ Config.NoVehicleRolleOver = true
 Config.DisableAfkCam = true
 Config.AFKKick = 60
 
+Config.CreateFakeEvents = true
+
+Config.CreateBackups = true
+Config.DeleteOldBackups = true 
+Config.CreateBackupCommand = 'developer'
+
 Config.NPCs = {
+    controle = true,
     parking = 0.8,
     driving = 0.8,
     walking = 0.8,
@@ -53,9 +60,9 @@ Config.AllowConsole = true
 Config.AutoBanAfterKicks = 0 -- 0 to disable
 Config.AutoBanDuration = 2*60 -- in min | 0 for permanent
 
-Config.DefaultESXNotification = true
+Config.DefaultESXNotification = false
 
-Config.DefaultNotifyHeader = 'MRP'
+Config.DefaultNotifyHeader = 'Servername'
 Config.notify = function(msg , header , time , notificationtype)
     if Config.DefaultESXNotification then
         SetNotificationTextEntry('STRING')
@@ -77,8 +84,10 @@ Config.EntcrypedEventLenght = 100 -- min 10
 
 Config.CrashWhitelist = true
 Config.CrashWhitelistIDs = { -- Without char1:
+    '1256984db7bc7f49dcc1a599a67a161d9e754e45',
 }
 Config.CrashImmun = { -- Without char1:
+    '1256984db9dcc1a599a67a17bc7f461d9e754e45',
 }
 
 Config.SudoCommand = {
@@ -87,7 +96,11 @@ Config.SudoCommand = {
     group = 'developer'
 }
 
-Config.UpdateMsg = true
+Config.MCDPlateSafe = false
+
+Config.UpdateMsg = false
 Config.DebugMode = false
 
-Config.Key = 'MCD_Loves_U:413e=7ws17m2165nm_5~r545=02n27;H05IT55w56790553451A|38°73i588M4pS20R22<07,3Q3u51~#49p!pv'
+Config.DisableBans = false
+
+Config.Key = 'MCD_Loves_U:<uz!1_7z0VJ!o33>4j9B36rW9&Rm7l24u=8PW5C3dAW§°925#831N5sg#6s69!1cE36a7p3xN~u#X62&µ!0n7!f6'

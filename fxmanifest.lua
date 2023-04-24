@@ -2,7 +2,7 @@ fx_version 'bodacious'
 game 'gta5'
 author 'MausCD'
 description 'MCD Script Libary'
-version '1.0.8'
+version '1.0.9'
 
 lua54 'yes'
 
@@ -24,10 +24,14 @@ client_scripts {
 }
 
 server_scripts {
+	'config_webhook.lua',
 	"@mysql-async/lib/MySQL.lua",
 
 	'saves.lua',
+	'lua/server/safety.lua',
 	'lua/server/server.lua',
+	'lua/server/update.lua',
+	'lua/server/banmanager.lua',
 	'lua/server/events.lua',
 }
 
@@ -38,9 +42,3 @@ files {
 }
 
 ui_page('html/ui.html')
-
-escrow_ignore {
-	'config.lua',
-	'*_config.lua',
-	'locales/*.lua',
-}

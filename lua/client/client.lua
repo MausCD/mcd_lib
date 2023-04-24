@@ -1,4 +1,27 @@
+local triggering = 0
+local results = 0
+
 local Cache = {}
+
+MCD.TriggerServerEvent = function(event , ...)
+    TriggerServerEvent(MCD.Event(event) , ...)
+end
+local events = {}
+MCD.TriggerServerCallback = function(svevent , cb , ...)
+    local data = ...
+    SetTimeout(math.random(1,100), function()
+        local event = 'mcd:event:'..MCD.Function.cKey(20)
+        triggering = triggering + 1
+        RegisterNetEvent(MCD.Event(event))
+        events[event] = AddEventHandler(MCD.Event(event), function(...)
+            results = results + 1
+            RemoveEventHandler(events[event])
+            events[event] = nil
+            cb(...)
+        end)
+        MCD.TriggerServerEvent('mcd_lib:Server:Callback' , svevent , event , data)
+    end)
+end
 
 MCD.Event = function(eventname)
     local finished = false
@@ -90,7 +113,7 @@ end
 
 MCD.GetNearbyVehicles = function(coords ,  distance , onlyowned)
     local vehicles = {}
-    for i,vehicle in ipairs(GetGamePool('CVehicle')) do
+    for i,vehicle in ipairs(MCD.GetGamePool('CVehicle')) do
         if Vdist(GetEntityCoords(vehicle), coords) <= distance then
             local model = GetEntityModel(vehicle)
             local name = GetLabelText(GetDisplayNameFromVehicleModel(model))
@@ -122,7 +145,7 @@ RegisterCommand('OpenJobMenu', function()
 end, true)
 RegisterKeyMapping('OpenJobMenu' , _U('keybind_desc'), Config.defaultMapper , Config.defaultBinding)
 
-MCD.SendBill = function(target , price , society , name , header , notes)
+MCD.SendBill = function(target , price , society , name , notes)
     if not target then
         target = GetPlayerServerId(PlayerId())
     end
@@ -130,8 +153,8 @@ MCD.SendBill = function(target , price , society , name , header , notes)
         local data = {
             target = target,
             invoice_value = price,
-            invoice_item = header,
-            society_name = name,
+            invoice_item = name,
+            society_name = society,
             invoice_notes = notes,
             society = society,
         }
@@ -139,18 +162,6 @@ MCD.SendBill = function(target , price , society , name , header , notes)
     else
         TriggerServerEvent('esx_billing:sendBill', target , society, name, price)
     end
-end
-
-MCD.GetCurrentTime = function()
-    local finished = false
-    local ret
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetCurrentTime'), function(time) 
-        ret = time
-        finished = true
-    end)
-
-    while not finished do Citizen.Wait(1) end
-    return ret
 end
 
 MCD.GetGamePool = function(gamepool)
@@ -205,7 +216,7 @@ MCD.DoesEntityExist = function(coord , radius , gamepool)
 end
 
 MCD.GetStreet = function()
-    local playerloc = GetEntityCoords(GetPlayerPed(-1))
+    local playerloc = GetEntityCoords(PlayerPedId())
     local streethash = GetStreetNameAtCoord(playerloc.x, playerloc.y, playerloc.z)
     street = GetStreetNameFromHashKey(streethash)
     local speed = Config.defaultspeed
@@ -268,85 +279,159 @@ MCD.IsAllowed = function(lowestgroup)
     end
 end
 
+local lastrequest = {
+    playerdata      = false,
+    ownedvehicles   = false,
+    licenses        = false,
+}
+local lastdata = {
+    playerdata      = {},
+    ownedvehicles   = {},
+    licenses        = {},
+}
 MCD.GetPlayerData = function()
-    local finished = false
-    local ret = {}
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetPlayerData'), function(data) 
-        finished = true
-        ret = data
-    end)
-    while not finished do Citizen.Wait(5) end
-    return ret
+    if not lastrequest.playerdata then
+        local finished = false
+        local ret = {}
+        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetPlayerData'), function(data) 
+            finished = true
+            ret = data
+        end)
+        while not finished do Citizen.Wait(5) end
+
+        lastrequest.playerdata = true
+        SetTimeout(1000, function()
+            lastrequest.playerdata = false
+        end)
+        lastdata.playerdata = ret
+        return ret
+    else
+        return lastdata.playerdata
+    end
 end
 
 MCD.GetOwnedVehicles = function()
-    local finished = false
-    local ret = {}
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetOwnedVehicles'), function(vehicles) 
-        finished = true
-        ret = vehicles
-    end)
-    while not finished do Citizen.Wait(5) end
-    return ret
+    if not lastrequest.ownedvehicles then
+        local finished = false
+        local ret = {}
+        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetOwnedVehicles'), function(vehicles) 
+            finished = true
+            ret = vehicles
+        end)
+        while not finished do Citizen.Wait(5) end
+        lastrequest.ownedvehicles = true
+        SetTimeout(1000, function()
+            lastrequest.ownedvehicles = false
+        end)
+        lastdata.ownedvehicles = ret
+        return ret
+    else
+        return lastdata.ownedvehicles
+    end
 end
 
 MCD.GetLicenses = function()
-    local finished = false
-    local ret = {}
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetLicenses'), function(licenses) 
-        finished = true
-        ret = licenses
-    end)
-    while not finished do Citizen.Wait(5) end
-    return ret
+    if not lastrequest.licenses then
+        local finished = false
+        local ret = {}
+        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetLicenses'), function(licenses) 
+            finished = true
+            ret = licenses
+        end)
+        while not finished do Citizen.Wait(5) end
+        lastrequest.licenses = true
+        SetTimeout(1000, function()
+            lastrequest.licenses = false
+        end)
+        lastdata.licenses = ret
+        return ret
+    else
+        return lastdata.licenses
+    end
 end
 
 MCD.HasLicense = function(license)
     local found = false
     for i,p in ipairs(MCD.GetLicenses()) do
-        if p.type == license then
+        if string.lower(p.type) == string.lower(license) then
             found = true
         end
     end
     return found
 end
 
-MCD.RemoveMoney = function(account , ammount , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveMoney'), account , ammount , ressourcename, target)
+MCD.RemoveMoney = function(account , ammount , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end    
+    MCD.TriggerServerEvent('mcd_lib:Server:RemoveMoney' , MCD.ToHash(account) , MCD.ToHash(ammount) , ressourcename, MCD.ToHash(target))
 end
-MCD.AddMoney = function(account , ammount , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddMoney'), account , ammount , ressourcename, target)
-end
-
-MCD.RemoveLicense = function(license , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveLicense'), license , ressourcename, target)
-end
-MCD.AddLicense = function(license , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddLicense'), license , ressourcename, target)
-end
-
-MCD.RemoveItem = function(item , count , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveItem'), item , count , ressourcename, target)
-end
-MCD.AddItem = function(item , count , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AddItem'), item , count , ressourcename, target)
+MCD.AddMoney = function(account , ammount , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end    
+    MCD.TriggerServerEvent('mcd_lib:Server:AddMoney' , MCD.ToHash(account) , MCD.ToHash(ammount) , ressourcename, MCD.ToHash(target))
 end
 
-MCD.MutePlayer = function(toggle , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:MutePlayer'), toggle , ressourcename, target)
+MCD.RemoveLicense = function(license , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end   
+    MCD.TriggerServerEvent('mcd_lib:Server:RemoveLicense' , MCD.ToHash(license) , ressourcename, MCD.ToHash(target))
+end
+MCD.AddLicense = function(license , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end   
+    MCD.TriggerServerEvent('mcd_lib:Server:AddLicense' , MCD.ToHash(license) , ressourcename, MCD.ToHash(target))
 end
 
-MCD.RemoveVehicle = function(plate , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:RemoveVehicle'), plate , ressourcename)
+MCD.RemoveItem = function(item , count , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end   
+    MCD.TriggerServerEvent('mcd_lib:Server:RemoveItem' , MCD.ToHash(item) , MCD.ToHash(count) , ressourcename, MCD.ToHash(target))
+end
+MCD.AddItem = function(item , count , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end   
+    MCD.TriggerServerEvent('mcd_lib:Server:AddItem' , MCD.ToHash(item) , MCD.ToHash(count) , ressourcename, MCD.ToHash(target))
 end
 
-MCD.SetJob = function(Job , Grade , ressourcename)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetJob'), Job , Grade , ressourcename, target)
+MCD.MutePlayer = function(toggle)
+    local ressourcename = GetInvokingResource()
+    local t = 1
+    if not toggle then
+        t = 0
+    end
+    MCD.TriggerServerEvent('mcd_lib:Server:MutePlayer' , MCD.ToHash(t) , ressourcename)
 end
 
-MCD.SetCoords = function(coords , wv)
+MCD.RemoveVehicle = function(plate)
+    local ressourcename = GetInvokingResource()
+    MCD.TriggerServerEvent('mcd_lib:Server:RemoveVehicle' , MCD.ToHash(plate) , ressourcename)
+end
+
+MCD.SetJob = function(Job , Grade)
+    local ressourcename = GetInvokingResource()
+    MCD.TriggerServerEvent('mcd_lib:Server:SetJob' , MCD.ToHash(Job) , MCD.ToHash(Grade) , ressourcename)
+end
+
+MCD.SetCoords = function(coords , wv , cb)
     local ped = PlayerPedId()
-    wv = true
     if wv then
         local veh = GetVehiclePedIsIn(ped, false)
         if veh ~= 0 then
@@ -355,26 +440,44 @@ MCD.SetCoords = function(coords , wv)
             end
         end
     end
-    FreezeEntityPosition(ped, true)
-    DoScreenFadeOut(1000)
-    Citizen.Wait(1500)
 
-    FreezeEntityPosition(ped, false)
-    Citizen.Wait(100)
-    SetEntityCoords(ped, coords + vector3(0,0,1) , GetEntityRotation(ped), false)
+    if coords then
+        FreezeEntityPosition(ped, true)
+        DoScreenFadeOut(1000)
+        Citizen.Wait(1500)
+    
+        FreezeEntityPosition(ped, false)
+        Citizen.Wait(100)
+        SetEntityCoords(ped, coords + vector3(0,0,1) , GetEntityRotation(ped), false)
+    
+        Citizen.Wait(1500)
+        DoScreenFadeIn(1000)
 
-    Citizen.Wait(1500)
-    DoScreenFadeIn(1000)
+        Citizen.Wait(1000)
+        if cb then
+            cb()
+        end
+    end
 end
 
 MCD.CreateObject = function(hash , coords , heading , localy)
     if type(hash) == 'string' then
         hash = GetHashKey(hash)
     end
+
+    RequestModel(hash)
+    while not HasModelLoaded(hash) do Citizen.Wait(1) end    
+
     local obj = CreateObject(hash, coords, not localy, false, false)
     if heading then
         SetEntityHeading(obj, heading)
     end
+    
+    local objNetId = NetworkGetNetworkIdFromEntity(obj)
+    SetNetworkIdCanMigrate(objNetId, true)
+    SetNetworkIdExistsOnAllMachines(objNetId, true)
+    NetworkRegisterEntityAsNetworked(ObjToNet(objNetId))    
+
     MCD.RefreshGamePoolCache()
     return obj
 end
@@ -427,6 +530,13 @@ MCD.PlayAnimation = function(animDictionary , animationName , ShowProp , Prophas
     end
     if ShowProp then
         if Cache.AnimationProp == nil then
+            Cache.PropData = {
+                Prophash    = Prophash,
+                position    = PropPlacement.position,
+                rotation    = PropPlacement.rotation,
+                BoneIndex   = BoneIndex
+            }
+
             Cache.AnimationProp = MCD.CreateObject(Prophash , GetEntityCoords(playerPed))
             AttachEntityToEntity(Cache.AnimationProp , playerPed , GetPedBoneIndex(playerPed, BoneIndex), PropPlacement.position , PropPlacement.rotation, false , true , false , -1, 0.0 , true)
         end
@@ -434,7 +544,7 @@ MCD.PlayAnimation = function(animDictionary , animationName , ShowProp , Prophas
 end
 
 MCD.StopAnimation = function()
-    ClearPedSecondaryTask(GetPlayerPed(-1))
+    ClearPedSecondaryTask(PlayerPedId())
     MCD.DeleteObject(Cache.AnimationProp)
     Cache.AnimationProp = nil
 end
@@ -445,15 +555,33 @@ AddEventHandler('onResourceStop', function(resourceName)
     end
 end)
 
+Citizen.CreateThread(function()
+    local sleep = 500
+    while true do Citizen.Wait(sleep)
+        if Cache.AnimationProp then
+            if not DoesEntityExist(Cache.AnimationProp) then
+                local data = Cache.PropData
+                if data then
+                    local playerPed = PlayerPedId()
+                    Cache.AnimationProp = MCD.CreateObject(data.Prophash , GetEntityCoords(playerPed))
+                    AttachEntityToEntity(Cache.AnimationProp , playerPed , GetPedBoneIndex(playerPed, data.BoneIndex), data.position , data.rotation, false , true , false , -1, 0.0 , true)
+                else
+                    MCD.DrawError('Coudn´t find Cached Animation Prop Data')
+                end
+            end
+        end
+    end
+end)
+
 MCD.SetPlate = function(vehicle , plate)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetPlate'), vehicle , string.upper(plate))
+    MCD.TriggerServerEvent('mcd_lib:Server:SetPlate' , MCD.ToHash(vehicle) , MCD.ToHash(string.upper(plate)))
 end
 
 MCD.GetRPName = function(target)
     local finished = false
     local ret
 
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetRPName'), function(name) 
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetRPName'), function(name) 
         ret = name
         finished = true
     end, target)
@@ -466,7 +594,7 @@ MCD.GetVehiclePrices = function()
     local finished = false
     local ret
 
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetVehiclePrices'), function(vehicles) 
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetVehiclePrices'), function(vehicles) 
         ret = vehicles
         finished = true
     end)
@@ -479,7 +607,7 @@ MCD.GetVehiclePrice = function(model)
     local finished = false
     local ret
 
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetVehiclePrice'), function(price) 
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetVehiclePrice'), function(price) 
         ret = price
         finished = true
     end , model)
@@ -489,10 +617,23 @@ MCD.GetVehiclePrice = function(model)
 end
 
 MCD.Draw3DText = function(coords , text , options)
+    if not options then
+        options = {}
+    end
+    if not options.rgba then
+        options.rgba = {r = 255 , g= 255 , b= 255 , a =255}
+    end
+    if not options.scale then
+        options.scale = 20
+    end
     local x,y,z = coords.x , coords.y , coords.z
     local px,py,pz=table.unpack(GetGameplayCamCoords())
     local dist = GetDistanceBetweenCoords(px,py,pz, x,y,z, 1)
-    local scale = (1/dist)*20 local fov = (1/GetGameplayCamFov())*100
+    local scale = (1/dist)*options.scale 
+    if options.reverse then
+        scale = (1/dist)/options.scale 
+    end
+    local fov = (1/GetGameplayCamFov())*100
     local scale = scale*fov SetTextScale(0.1*scale, 0.1*scale)
 
     SetTextFont(4)
@@ -523,18 +664,21 @@ MCD.CreateBlip = function(coords , sprite , size , color , name , alpha , flash 
     if alpha then SetBlipAlpha(blip, alpha) end
     if flash then SetBlipFlashes(blip, flash) if flashspeed then SetBlipFlashInterval(blip , flashspeed) end end
     SetBlipAsShortRange(blip , true)
-    table.insert(blips , blip)
+    table.insert(blips , {
+        blip = blip,
+        ressource = GetInvokingResource()
+    })
     return #blips
 end
 
 MCD.RemoveBlip = function(id)
-    RemoveBlip(blips[id])
+    RemoveBlip(blips[id].blip)
     blips[id] = nil
 end
 
 MCD.CreatBlipEntity = function(entity , sprite , size , color , name, alpha , flash , flashspeed)
     local blip
-    if(GetBlipFromEntity(entity) ~= nil) then
+    if GetBlipFromEntity(entity) then
         blip = GetBlipFromEntity(entity)
     else
         blip = AddBlipForEntity(entity)
@@ -550,18 +694,24 @@ MCD.CreatBlipEntity = function(entity , sprite , size , color , name, alpha , fl
     if alpha then SetBlipAlpha(blip, alpha) end
     if flash then SetBlipFlashes(blip, flash) if flashspeed then SetBlipFlashInterval(blip , flashspeed) end end
     SetBlipAsShortRange(blip, true)
+    table.insert(blips , {
+        blip = blip,
+        ressource = GetInvokingResource()
+    })
 
-    table.insert(blips , blip)
     return #blips
 end
 
 MCD.IsPlateTaken = function(plate)
+    if Config.MCDPlateSafe then
+        plate = plate:gsub(' ' , '_')
+    end
+
     return false
 end
 
 MCD.GeneratePlate = function(PlateLetters , PlateNumbers , PlateUseSpace)
     local generatedPlate
-	local doBreak = false
 
 	while true do
 		Citizen.Wait(2)
@@ -589,7 +739,7 @@ MCD.SendNotifyToJob = function(job , msg , header , time , notificationtype)
         notifytype = notificationtype,
         simplefy = true,
     }
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), data)
+    MCD.TriggerServerEvent('mcd_lib:Server:AdvancedNotify' , data)
 end
 
 MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconType , flash , saveToBrief , hudColorIndex)
@@ -600,12 +750,11 @@ MCD.SendAdvancedNotifyToJob = function(job , msg , header , textureDict , iconTy
         textureDict = textureDict,
         iconType = iconType,
         flash = flash,
-        iconType = iconType,
         saveToBrief = saveToBrief,
         hudColorIndex = hudColorIndex,
         simplefy = false,
     }
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), nil , nil , data)
+    MCD.TriggerServerEvent('mcd_lib:Server:AdvancedNotify' , data)
 end
 
 MCD.SendAdvancedNotify = function(msg , header , textureDict , iconType , flash , saveToBrief , hudColorIndex)
@@ -620,14 +769,14 @@ MCD.SendAdvancedNotify = function(msg , header , textureDict , iconType , flash 
         hudColorIndex = hudColorIndex,
         simplefy = false,
     }
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:AdvancedNotify'), nil , nil , data)
+    MCD.TriggerServerEvent('mcd_lib:Server:AdvancedNotify' , data)
 end
 
 MCD.AmIMuted = function()
     local finished = false
     local ret
 
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:AmIMuted'), function(muted) 
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:AmIMuted'), function(muted) 
         ret = muted
         finished = true
     end)
@@ -664,12 +813,12 @@ Citizen.CreateThread(function()
 
     if Config.MuteOnPlayerDeath then
         if isDead then
-            MCD.MutePlayer(true , GetCurrentResourceName())
+            MCD.MutePlayer(true)
             deathmuted = true
         else
             if deathmuted then
                 deathmuted = false
-                MCD.MutePlayer(false , GetCurrentResourceName())
+                MCD.MutePlayer(false)
             end
         end
     end
@@ -679,42 +828,57 @@ MCD.IsDeath = function()
     return isDead
 end
 
-MCD.ItemName = function(item)
-    local finished = false
-    local ret
-
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:ItemName'), function(itemlabel) 
-        ret = itemlabel
-        finished = true
-    end, item)
-
-    while not finished do Citizen.Wait(1) end
-    return ret
-end
-
 MCD.HasItem = function(data , old)
     if type(data) == 'string' then
         OldFunction('HasItem')
         local item = data
         local count = old
-        for i,p in ipairs(ESX.GetPlayerData().inventory) do
-            if p.name == item then
-                if count then
-                    return p.count >= count
-                else
-                    return p.count > 0
+        if not Config.OxInventory then
+            for name,count in pairs(MCD.GetPlayerData().inventory) do
+                if name == item then
+                    if count then
+                        return count >= count
+                    else
+                        return count > 0
+                    end
+                end
+            end
+        else
+            for i,p in ipairs(MCD.GetPlayerData().inventory) do
+                local name = p.name
+                local count = p.count
+                if name == item then
+                    if count then
+                        return count >= count
+                    else
+                        return count > 0
+                    end
                 end
             end
         end
         return false
     else
         for a,b in ipairs(data) do
-            for i,p in ipairs(ESX.GetPlayerData().inventory) do
-                if p.name == b.item then
-                    if b.count then
-                        return p.count >= b.count
-                    else
-                        return p.count > 0
+            if not Config.OxInventory then
+                for name,count in pairs(MCD.GetPlayerData().inventory) do
+                    if name == b.item then
+                        if b.count then
+                            return count >= b.count
+                        else
+                            return count > 0
+                        end
+                    end
+                end
+            else
+                for i,p in ipairs(MCD.GetPlayerData().inventory) do
+                    local name = p.name
+                    local count = p.count
+                    if name == b.item then
+                        if b.count then
+                            return count >= b.count
+                        else
+                            return count > 0
+                        end
                     end
                 end
             end
@@ -724,11 +888,21 @@ MCD.HasItem = function(data , old)
 end
 
 MCD.GetitemCount = function(item)
-    for i,p in ipairs(ESX.GetPlayerData().inventory) do
-        if p.name == item then
-            return p.count
+    if not Config.OxInventory then
+        for name,count in pairs(MCD.GetPlayerData().inventory) do
+            if name == item then
+                return count
+            end
         end
-    end
+    else
+        for i,p in ipairs(MCD.GetPlayerData().inventory) do
+            local name = p.name
+            local count = p.count
+            if name == item then
+                return count
+            end
+        end
+    end   
     return 0
 end
 
@@ -762,7 +936,7 @@ MCD.SteamData = function()
     local ret
     local finished = false
     
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetSteamData'), function(data) 
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetSteamData'), function(data) 
         ret = data
         finished = true
     end)
@@ -848,7 +1022,7 @@ Citizen.CreateThread(function()
 end) 
 
 Citizen.CreateThread(function()
-	while true do
+	while Config.NPCs.controle do
 	    Citizen.Wait(0)
 	    SetVehicleDensityMultiplierThisFrame(Config.NPCs.driving)
 	    SetPedDensityMultiplierThisFrame(Config.NPCs.walking)
@@ -871,14 +1045,14 @@ Citizen.CreateThread(function()
 end)
 
 MCD.BanPlayer = function(playerid , reason , duration)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:BanPlayer') , playerid , reason , duration)
+    MCD.TriggerServerEvent('mcd_lib:Server:BanPlayer' , MCD.ToHash(playerid) , MCD.ToHash(reason) , MCD.ToHash(duration))
 end
 
 MCD.HasJob = function(Jobs)
     local jname = MCD.GetPlayerData().job.name
     local jgrade = MCD.GetPlayerData().job.grade
 
-    if Jobs == 'string' then
+    if type(Jobs) == 'string' then
         OldFunction('HasJob')
         local job = MCD.GetPlayerData().job.name
         if type(Jobs) ~= 'string' then
@@ -911,8 +1085,13 @@ MCD.HasJob = function(Jobs)
     end
 end
 
-MCD.SetMoney = function(account , ammount , ressourcename, target)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:SetMoney'), account , ammount , ressourcename, target)
+MCD.SetMoney = function(account , ammount , target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end    
+    MCD.TriggerServerEvent('mcd_lib:Server:SetMoney' , MCD.ToHash(account) , MCD.ToHash(ammount) , ressourcename, MCD.ToHash(target))
 end
 
 MCD.CanCarry = function(data , old)
@@ -924,7 +1103,7 @@ MCD.CanCarry = function(data , old)
         local ret
         local finished = false
         
-        ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld'), function(can) 
+        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld'), function(can) 
             ret = can
             finished = true
         end , item , count)
@@ -935,7 +1114,7 @@ MCD.CanCarry = function(data , old)
         local ret
         local finished = false
         
-        ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarry'), function(can) 
+        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarry'), function(can) 
             ret = can
             finished = true
         end , data)
@@ -946,73 +1125,119 @@ MCD.CanCarry = function(data , old)
 end
 
 MCD.Kick = function(playerid , reason)
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:Kick') , playerid , reason)
+    MCD.TriggerServerEvent('mcd_lib:Server:Kick' , MCD.ToHash(playerid) , MCD.ToHash(reason))
 end
 
-local held = {}
-MCD.IsControlHeld = function(control)
-    return held[string.upper(control)]
+MCD.IsControlHeld = function(control , time)
+    if not time then
+        time = Config.ControlHeld
+    end
+    local key = control
+    if type(control) ~= 'number' then
+        key = MCD.Key(control)
+    end
+    if IsControlPressed(0, key) then
+        Citizen.Wait(time)
+        return IsControlPressed(0, key)
+    else
+        return false
+    end
 end
 
 MCD.IsControlJustRealeased = function(control)
-    return IsControlJustReleased(0, keys[control])
+    return IsControlJustReleased(0, MCD.Key(control))
 end
 
 MCD.IsControlPressed = function(control)
-    return IsControlPressed(0, keys[control])
+    return IsControlPressed(0, MCD.Key(control))
 end
 
-Cache.held = {}
-Citizen.CreateThread(function()
-    local sleep = 10
-    while true do Citizen.Wait(sleep)
-        for keyname,control in pairs(keys) do
-            if IsControlPressed(0, control) then
-                if Cache.held[keyname] then
-                    local timediff = MCD.GetTimeDifference(Cache.held[keyname] , MCD.GetCurrentTime())
-                    if math.floor(timediff*1000) >= Config.ControlHeld then
-                        held[keyname] = true
-                    else
-                        held[keyname] = false
-                    end
-                else
-                    Cache.held[keyname] = MCD.GetCurrentTime()
-                    held[keyname] = false
-                end
-            else
-                Cache.held[keyname] = nil
-                held[keyname] = false
+MCD.HasWeapon = function(weapons)
+    local loadout = MCD.GetPlayerData().loadout
+    local hasweapon = false
+    if type(weapons) == 'string' or type(weapons) == 'number' then
+        local hash = weapons
+        if type(weapons) == 'string' then hash = GetHashKey(weapons) end
+        for i,p in ipairs(loadout) do
+            if GetHashKey(p.name) == hash then
+                hasweapon = true
+                break
             end
+        end
+    else
+        for i,weapon in pairs(weapons) do
+            local hash = weapon
+            if type(weapon) == 'string' then hash = GetHashKey(weapon) end
+            for i,p in ipairs(loadout) do
+                if GetHashKey(p.name) == hash then
+                    hasweapon = true
+                    break
+                end
+            end
+        end
+    end
+    return hasweapon
+end
+
+Citizen.CreateThread(function()
+    MCD.TriggerServerEvent('mcd_lib:Server:Connected')
+end)
+
+RegisterCommand('clearblips', function()
+    for i,p in ipairs(blips) do
+        RemoveBlip(p.blip)
+    end
+    blips = {}
+
+    MCD.TriggerEvent('MCD:BlipClear')
+end)
+
+MCD.RemoveWeapon = function(weapon ,  target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end    
+    MCD.TriggerServerEvent('mcd_lib:Server:RemoveWeapon' , MCD.ToHash(weapon) , ressourcename, MCD.ToHash(target))
+end
+MCD.AddWeapon = function(weapon , ammo ,  target , a)
+    local ressourcename = GetInvokingResource()
+    if type(target) ~= 'number' then
+        target = a
+        print(MCD.Function.ConvertPrint('Ressource ~y~'..ressourcename..'~s~ uses GetCurrentRessourceName()'))
+    end    
+    MCD.TriggerServerEvent('mcd_lib:Server:AddWeapon' , MCD.ToHash(weapon) , MCD.ToHash(ammo) , ressourcename, MCD.ToHash(target))
+end
+
+AddEventHandler('onResourceStop', function(resourceName)
+    for i,p in ipairs(blips) do
+        if p.ressource == resourceName then
+            RemoveBlip(p.blip)
+            p = nil
         end
     end
 end)
 
-MCD.HasWeapon = function(weapons)
-    local ret
+
+MCD.GetPrice = function(name , ressource)
+    local res = GetInvokingResource()
+    if ressource then
+        res = ressource
+    end
     local finished = false
-    
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:HasWeapon'), function(has) 
-        ret = has
+    local ret
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetPrice'), function(price) 
+        ret = price
         finished = true
-    end , weapons)
+    end , name , res)
 
     while not finished do Citizen.Wait(1) end
     return ret
 end
 
-MCD.LiceneName = function(license)
-    local finished = false
-    local ret
-
-    ESX.TriggerServerCallback(MCD.Event('mcd_lib:Server:LiceneName'), function(licenseLable) 
-        ret = licenseLable
-        finished = true
-    end, license)
-
-    while not finished do Citizen.Wait(1) end
-    return ret
+MCD.NormalDimension = function()
+    MCD.TriggerServerEvent('mcd_lib:Server:NormalDimension')
 end
-
-Citizen.CreateThread(function()
-    TriggerServerEvent(MCD.Event('mcd_lib:Server:Connected'))
-end)
+MCD.SingleDimension = function()
+    MCD.TriggerServerEvent('mcd_lib:Server:SingleDimension')
+end

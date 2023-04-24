@@ -1,4 +1,4 @@
-Locales['de'] = {
+Locales['en'] = {
 	['keybind_desc'] = 'JobMenu öffnen',
 	
 	['success'] = '~g~Erfolgreich~s~',

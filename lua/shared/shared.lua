@@ -5,6 +5,36 @@ end)
 exports('getSharedObject', function()
 	return MCD
 end)
+
+local registeredevents = {}
+
+MCD.RegisterEvent = function(event , cb)
+    local ressource = GetInvokingResource()
+    if not ressource then
+        ressource = 'mcd_lib'
+    end
+	SetTimeout(0, function()
+		RegisterNetEvent(MCD.Event(event))
+		local event = AddEventHandler(MCD.Event(event), function(...)
+			if os then
+				cb(source, ...)
+			else
+				cb(...)
+			end
+		end)
+
+        if not registeredevents[ressource] then
+            registeredevents[ressource] = {}
+        end
+        table.insert(registeredevents[ressource] , event)
+	end)
+end
+
+MCD.TriggerEvent = function(event , ...)
+	TriggerEvent(MCD.Event(event) , ...)
+end
+
+
 MCD.Config = function()
 	return Config
 end
@@ -52,6 +82,9 @@ local keysinput = {
 	["NENTER"] = 'INPUT_FRONTEND_ACCEPT', ["N4"] = 'INPUT_VEH_FLY_ROLL_LEFT_ONLY', ["N5"] = 'INPUT_VEH_FLY_PITCH_UD', ["N6"] = 'INPUT_VEH_FLY_ROLL_LR', ["N+"] = 'INPUT_VEH_CINEMATIC_UP_ONLY', ["N-"] = 'INPUT_VEH_CINEMATIC_DOWN_ONLY', ["N7"] = 'INPUT_VEH_FLY_SELECT_TARGET_LEFT', ["N8"] = 'INPUT_VEH_FLY_PITCH_UP_ONLY', ["N9"] = 'INPUT_VEH_FLY_SELECT_TARGET_RIGHT'
 }
 MCD.Key = function(key)
+    if type(key) == 'number' then
+        return key
+    end
     return keys[string.upper(key)]
 end
 MCD.KeyString = function(key)
@@ -69,3 +102,193 @@ end
 MCD.GetHelpTextSpeed = function()
     return Config.HelpTextSpeed
 end
+
+itemnames = {}
+licensenames = {}
+Citizen.CreateThread(function()
+	if not os then
+		MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(items) 
+			itemnames = items
+		end)
+		MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(licenses) 
+			licensenames = licenses
+		end)
+	else
+		local finished = {
+			items = false,
+			license = false
+		}
+		
+		MySQL.Async.fetchAll('SELECT * FROM items ', {}, function(result)
+			for i,p in ipairs(result) do
+				itemnames[p.name] = p.label
+			end
+			finished.items = true
+		end)
+		MySQL.Async.fetchAll('SELECT * FROM licenses ', {}, function(result)
+			for i,p in ipairs(result) do
+				licensenames[p.type] = p.label
+			end
+			finished.license = true
+		end)
+		
+		ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(src , cb)
+			while not finished.items do Citizen.Wait(1) end
+			cb(itemnames)
+		end)
+		ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(src , cb)
+			while not finished.items do Citizen.Wait(1) end
+			cb(licensenames)
+		end)
+	end
+end)
+
+MCD.ItemName = function(item)
+    local name = itemnames[item]
+    if not name then
+        name = 'Item Name doesnt exist for ' .. item
+    end
+    return name
+end
+
+MCD.LiceneName = function(item)
+    local name = licensenames[item]
+    if not name then
+        name = 'License Name doesnt exist for ' .. item
+    end
+    return name
+end
+
+MCD.WeaponName = function(weapon)
+    if string.find(weapon, "weapon_") then
+        return ESX.GetWeaponLabel(string.upper(weapon))
+    else
+        return ESX.GetWeaponLabel(string.upper('WEAPON_'..weapon))
+    end
+end
+
+MCD.Debug = function(msg)
+	if not msg then msg = 'no message specified' end
+	local num = math.random(1000,9999)
+	local text = '[~b~'..num..'~s~][~y~'..GetInvokingResource()..'~s~] ~p~' .. msg
+    print(MCD.Function.ConvertPrint(text))
+end
+
+MCD.DrawError = function(msg)
+	if not msg then msg = 'no message specified' end
+	local text = '[~y~'..GetInvokingResource()..'~s~][~o~ERROR~s~] ~r~' .. msg
+    print(MCD.Function.ConvertPrint(text))
+end
+MCD.DrawInfo = function(msg)
+	if not msg then msg = 'no message specified' end
+	local text = '[~y~'..GetInvokingResource()..'~s~][~b~INFO~s~] ~g~' .. msg
+    print(MCD.Function.ConvertPrint(text))
+end
+
+MCD.CheckFunktionSpeed = function(func , ...)
+	local s = MCD.GetCurrentTime()
+	func(...)
+	local e = MCD.GetCurrentTime()
+	return math.floor(MCD.Math.TimeDifference(s , e)*1000)..'ms'
+end
+
+MCD.BenchmarkFunction = function(func , fast , superfast)    
+    local start = MCD.GetCurrentTime()
+    MCD.DrawInfo('Test Started')
+    local times = {}
+    local max = 100
+    local sleep = 400
+    if superfast then
+        max = 10
+        sleep = 0
+    end
+    local msgs = {}
+
+    if not fast then
+        for i=0, max  do
+            for a=1, 10  do
+                local b = a*10
+                if i/max*100 > b then
+                    if not msgs[b] then
+                        msgs[b] = true
+                        MCD.DrawInfo(b..'%')
+                    end
+                end
+            end
+            local ms = tonumber(MCD.CheckFunktionSpeed(func):match("%d+"))
+            table.insert(times , {
+                duration = ms
+            })
+        end
+    else
+        SetTimeout(0, function()
+            for i=0, max  do
+                Citizen.Wait(sleep)
+                SetTimeout(0, function()
+                    local ms = tonumber(MCD.CheckFunktionSpeed(func):match("%d+"))
+                    table.insert(times , {
+                        duration = ms
+                    })
+                end)
+            end
+        end)
+
+        while #times ~= max do
+            local i = #times
+            for a=1, 10  do
+                local b = a*10
+                if i/max*100 > b then
+                    if not msgs[b] then
+                        msgs[b] = true
+                        MCD.DrawInfo(b..'%')
+                    end
+                end
+            end
+            Citizen.Wait(1)
+        end
+    end
+
+    MCD.DrawInfo('Finished! Loading results')
+
+    local chilltime = max*sleep
+    local ms = times[1].duration
+    for i,p in ipairs(times) do
+        ms = (ms+p.duration)/2
+    end
+    ms = math.floor(ms)
+    local run = MCD.Math.TimeDifference(start , MCD.GetCurrentTime())
+    local runtime =  ESX.Math.Round(run , 1)..'s'
+   
+    MCD.DrawInfo('The Function Took in average ' .. ms .. 'ms and the proccess ' .. runtime)
+    if fast then
+        MCD.DrawInfo('With no Function Delay it would only took ' .. ESX.Math.Round(((run*1000)-chilltime)/1000 , 1)..'seconds')
+    end
+end
+
+Citizen.CreateThread(function()
+	while not Config do Citizen.Wait(1) end
+	if GetResourceState('ox_inventory') ~= 'missing' then
+		Config.OxInventory = true
+	end
+    
+	if GetResourceState('okokBilling') ~= 'missing' then
+		Config.UsingOkokBilling = true
+	end
+end)
+
+MCD.GetCurrentTime = function()
+    if os then
+        return os.clock()
+    else
+        return GetGameTimer()
+    end
+end
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if registeredevents[resourceName] then
+        for i,event in pairs(registeredevents[resourceName]) do
+            RemoveEventHandler(event)
+        end
+        registeredevents[resourceName] = {}
+    end
+end)
