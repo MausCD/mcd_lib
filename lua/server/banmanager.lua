@@ -292,7 +292,13 @@ RegisterCommand('mcdban', function(playerId, args)
     end
 
     if a then
-        if ESX.GetPlayerFromId(target) then
+        local player
+        if QBCore then
+            player = QBCore.Functions.GetPlayer(target)
+        else
+            player = ESX.GetPlayerFromId(target)
+        end
+        if player then
             if duration then
                 local tn = GetPlayerName(target)
                 local banid = Ban(target , duration , reason , a)
@@ -445,8 +451,13 @@ RegisterCommand('mcdkick', function(playerId, args)
     end
 
     if a then
-
-        if ESX.GetPlayerFromId(target) then
+        local player
+        if QBCore then
+            player = QBCore.Functions.GetPlayer(target)
+        else
+            player = ESX.GetPlayerFromId(target)
+        end
+        if player then
             MCD.Kick(target , reason , playerId)
         else
             if a == 'Console' then

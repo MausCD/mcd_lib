@@ -130,16 +130,40 @@ MCD.RegisterEvent('mcd_lib:Server:SetJob' , function(src , param1 , param2 , par
     end
 end)
 
-ESX.RegisterServerCallback(Config.Key , function(src , cb , eventname)
-    cb(MCD.Event(eventname))
-end)
+if QBCore then
+    QBCore.Functions.CreateCallback(Config.Key , function(src , cb , eventname)
+        cb(MCD.Event(eventname))
+    end)
+else
+    ESX.RegisterServerCallback(Config.Key , function(src , cb , eventname)
+        cb(MCD.Event(eventname))
+    end)
+end
 
 MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetPlayerData') , function(src , cb)
     local _ = src
-    local xPlayer = ESX.GetPlayerFromId(_)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_) Citizen.Wait(5) end
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_)
+    else
+        xPlayer = ESX.GetPlayerFromId(_)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_)
+        else
+            xPlayer = ESX.GetPlayerFromId(_)
+        end
+        Citizen.Wait(5)
+    end
+    local group
+    if QBCore then
+        group = xPlayer.Functions.GetPermission()
+    else
+        group = xPlayer.getGroup()
+    end
     local data = {
-        group       = xPlayer.getGroup(),
+        group       = group,
         money       = MCD.GetMoney(_),
         job         = MCD.GetJob(_),
         inventory   = MCD.GetInventory(_),
@@ -173,9 +197,27 @@ MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetRPName') , function(src 
     if not target then
         target = src
     end
-    local xPlayer = ESX.GetPlayerFromId(target)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    cb(xPlayer.getName())
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(target)
+    else
+        xPlayer = ESX.GetPlayerFromId(target)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(target)
+        else
+            xPlayer = ESX.GetPlayerFromId(target)
+        end
+        Citizen.Wait(5)
+    end
+    local name
+    if QBCore then
+        name = xPlayer.PlayerData.firstname .. ' ' .. xPlayer.PlayerData.lastname  
+    else
+        name = xPlayer.getName()
+    end
+    cb(name)
 end)
 
 MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:AmIMuted') , function(src , cb)
@@ -200,16 +242,48 @@ MCD.RegisterEvent('mcd_lib:Server:SetMoney' , function(src , param1 , param2 , p
 end)
 
 MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld') , function(src , cb , item , count)
-    local xPlayer = ESX.GetPlayerFromId(src)
-    cb(xPlayer.canCarryItem(item, count))
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(src)
+    else
+        xPlayer = ESX.GetPlayerFromId(src)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(src)
+        else
+            xPlayer = ESX.GetPlayerFromId(src)
+        end
+        Citizen.Wait(5)
+    end
+    if QBCore then
+        cb(true) 
+    else
+        cb(xPlayer.canCarryItem(item, count))
+    end
 end)
 
 MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:CanCarry') , function(src , cb , items)
-    local xPlayer = ESX.GetPlayerFromId(src)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(src)
+    else
+        xPlayer = ESX.GetPlayerFromId(src)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(src)
+        else
+            xPlayer = ESX.GetPlayerFromId(src)
+        end
+        Citizen.Wait(5)
+    end
     local cancarry = true
     for i,p in ipairs(items) do
-        if not xPlayer.canCarryItem(p.item, p.count) then
-            cancarry = false
+        if not QBCore then
+            if not xPlayer.canCarryItem(p.item, p.count) then
+                cancarry = false
+            end
         end
     end
     cb(cancarry)
@@ -260,4 +334,8 @@ end)
 
 MCD.RegisterEvent('mcd_lib:Server:NormalDimension' , function(src , param1 , param2 , param3 , param4 , param5)
     MCD.NormalDimension(src)
+end)
+
+MCD.RegisterServerCallback(MCD.Event('mcd_lib:Server:IsPlateTaken') , function(src , cb , plate)
+    cb(MCD.IsPlateTaken(plate))
 end)

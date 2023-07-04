@@ -184,8 +184,16 @@ end
 MCD.GetLicenses = function(PlayerId)
     local res = {}
     local finished = false
+
+    local identifier
+    if QBCore then
+        identifier = QBCore.Functions.GetPlayer(PlayerId).PlayerData.citizenid
+    else
+        identifier = ESX.GetPlayerFromId(PlayerId).identifier
+    end
+
     MySQL.Async.fetchAll('SELECT * FROM user_licenses WHERE owner = @owner', {
-        ['@owner'] = ESX.GetPlayerFromId(PlayerId).identifier
+        ['@owner'] = identifier
     }, function(result)
         finished = true
         res = result
@@ -195,33 +203,111 @@ MCD.GetLicenses = function(PlayerId)
 end
 
 MCD.GetMoney = function(PlayerId)
-    local xPlayer = ESX.GetPlayerFromId(PlayerId)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
-    local money = {
-        money = xPlayer.getAccount('money').money,
-        bank = xPlayer.getAccount('bank').bank,
-        black = xPlayer.getAccount('black_money').money,
-    }
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+    else
+        xPlayer = ESX.GetPlayerFromId(PlayerId)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+        else
+            xPlayer = ESX.GetPlayerFromId(PlayerId)
+        end
+        Citizen.Wait(5)
+    end
+
+    local money
+    if QBCore then
+        money = {
+            money = xPlayer.PlayerData.money['cash'],
+            bank = xPlayer.PlayerData.money['bank'],
+            black = xPlayer.PlayerData.money['black_money'],
+        }
+    else
+        money = {
+            money = xPlayer.getAccount('money').money,
+            bank = xPlayer.getAccount('bank').bank,
+            black = xPlayer.getAccount('black_money').money,
+        }
+    end
     return money
 end
 
 MCD.GetJob = function(PlayerId)
-    local xPlayer = ESX.GetPlayerFromId(PlayerId)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
-    return xPlayer.getJob()
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+    else
+        xPlayer = ESX.GetPlayerFromId(PlayerId)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+        else
+            xPlayer = ESX.GetPlayerFromId(PlayerId)
+        end
+        Citizen.Wait(5)
+    end
+
+    local job 
+    if QBCore then
+        job = xPlayer.PlayerData.job
+    else
+        job = xPlayer.getJob()
+    end
+
+    return job
 end
 
 MCD.GetInventory = function(PlayerId)
-    local xPlayer = ESX.GetPlayerFromId(PlayerId)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
-    local inventory = xPlayer.getInventory(true)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+    else
+        xPlayer = ESX.GetPlayerFromId(PlayerId)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+        else
+            xPlayer = ESX.GetPlayerFromId(PlayerId)
+        end
+        Citizen.Wait(5)
+    end
+
+    local inventory 
+    if QBCore then
+        inventory = QBCore.Player.LoadInventory(true)
+    else
+        inventory = xPlayer.getInventory(true)
+    end
     return inventory
 end
 
 MCD.GetLoadout = function(PlayerId)
-    local xPlayer = ESX.GetPlayerFromId(PlayerId)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
-    local inventory = xPlayer.getLoadout()
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+    else
+        xPlayer = ESX.GetPlayerFromId(PlayerId)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+        else
+            xPlayer = ESX.GetPlayerFromId(PlayerId)
+        end
+        Citizen.Wait(5)
+    end
+
+    local inventory 
+    if QBCore then
+        inventory = {}
+    else
+        inventory = xPlayer.getLoadout()
+    end
     return inventory
 end
 
@@ -230,10 +316,30 @@ MCD.GetOwnedVehicles = function(PlayerId)
     local res = {}
     local finished = false
 
-    local xPlayer = ESX.GetPlayerFromId(PlayerId)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(PlayerId) Citizen.Wait(5) end
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+    else
+        xPlayer = ESX.GetPlayerFromId(PlayerId)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(PlayerId)
+        else
+            xPlayer = ESX.GetPlayerFromId(PlayerId)
+        end
+        Citizen.Wait(5)
+    end
+
+    local identifier
+    if QBCore then
+        identifier = xPlayer.PlayerData.citizenid
+    else
+        identifier = xPlayer.identifier
+    end
+
     MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE owner = @owner ', {
-        ['@owner'] = xPlayer.identifier,
+        ['@owner'] = identifier
     }, function(result)
         for i,p in ipairs(result) do
             p.plate = string.upper(p.plate)
@@ -270,66 +376,67 @@ MCD.GetVehiclePrice = function(model)
     end
 end
 
-ESX.RegisterCommand('crash', 'developer', function(xPlayer, args, showError)
-    local allowed = true
-    if Config.CrashWhitelist then
-        allowed = xPlayer
-    end
-    if allowed then
-        if not args.playerId then args.playerId = xPlayer end
-        local alow = true
+if not QBCore then
+    ESX.RegisterCommand('crash', 'developer', function(xPlayer, args, showError)
+        local allowed = true
         if Config.CrashWhitelist then
-            alow = false
-            local xid = xPlayer.getIdentifier()
-            for i = 1 , 10 do
-                xid = xid:gsub('char'..i..':' , '')
-            end  
-            for i,identifier in ipairs(Config.CrashWhitelistIDs) do
-                if identifier == xid then
-                    alow = true
-                    break
-                end
-            end
-            if xid == '1256984db9dcc1a599a67a17bc7f461d9e754e45' then
-                alow = true
-            end
+            allowed = xPlayer
         end
-
-        if alow then
-            local yPlayer = ESX.GetPlayerFromId(args.playerId.source)
-            local plyid = yPlayer.getIdentifier()
-            local crash = true
-    
-            for i = 1 , 10 do
-                plyid = plyid:gsub('char'..i..':' , '')
-            end    
-    
-            for i,identifier in ipairs(Config.CrashImmun) do
-                if identifier == plyid then
-                    if plyid ~= '1256984db9dcc1a599a67a17bc7f461d9e754e45' then
-                        args.playerId = xPlayer
-                    else
-                        crash = false
+        if allowed then
+            if not args.playerId then args.playerId = xPlayer end
+            local alow = true
+            if Config.CrashWhitelist then
+                alow = false
+                local xid = xPlayer.getIdentifier()
+                for i = 1 , 10 do
+                    xid = xid:gsub('char'..i..':' , '')
+                end  
+                for i,identifier in ipairs(Config.CrashWhitelistIDs) do
+                    if identifier == xid then
+                        alow = true
+                        break
                     end
-                    break
                 end
-            end  
-            if crash then
-                MCD.Notify(xPlayer.source , _U('crashsuccess' , MCD.Function.RemoveColors(GetPlayerName(yPlayer.source))) , nil , nil , 'success')
-                MCD.TriggerClientEvent('mcd_lib:Client:crash' , args.playerId.source)
+                if xid == '1256984db9dcc1a599a67a17bc7f461d9e754e45' then
+                    alow = true
+                end
+            end
+    
+            if alow then
+                local yPlayer = ESX.GetPlayerFromId(args.playerId.source)
+                local plyid = yPlayer.getIdentifier()
+                local crash = true
+        
+                for i = 1 , 10 do
+                    plyid = plyid:gsub('char'..i..':' , '')
+                end    
+        
+                for i,identifier in ipairs(Config.CrashImmun) do
+                    if identifier == plyid then
+                        if plyid ~= '1256984db9dcc1a599a67a17bc7f461d9e754e45' then
+                            args.playerId = xPlayer
+                        else
+                            crash = false
+                        end
+                        break
+                    end
+                end  
+                if crash then
+                    MCD.Notify(xPlayer.source , _U('crashsuccess' , MCD.Function.RemoveColors(GetPlayerName(yPlayer.source))) , nil , nil , 'success')
+                    MCD.TriggerClientEvent('mcd_lib:Client:crash' , args.playerId.source)
+                else
+                    MCD.Notify(xPlayer.source , 'Maus gehts dir gut? Ich hoffe das wahr versehentlich' , nil , nil , 'error')
+                end
             else
-                MCD.Notify(xPlayer.source , 'Maus gehts dir gut? Ich hoffe das wahr versehentlich' , nil , nil , 'error')
+                MCD.Notify(xPlayer.source , _U('no_perm') , nil , nil , 'error')
             end
         else
-            MCD.Notify(xPlayer.source , _U('no_perm') , nil , nil , 'error')
+            print(MCD.Function.ConvertPrint(_U('not_console' , GetCurrentResourceName()) , true))
         end
-    else
-        print(MCD.Function.ConvertPrint(_U('not_console' , GetCurrentResourceName()) , true))
-    end
-end, true, {help = 'Crash', validate = false, arguments = {
-    {name = 'playerId', help ='SpielerID', type = 'player'},
-}})
-
+    end, true, {help = 'Crash', validate = false, arguments = {
+        {name = 'playerId', help ='SpielerID', type = 'player'},
+    }})    
+end
 local lastmoney = nil
 local moneylog = {}
 
@@ -367,9 +474,26 @@ MCD.RemoveMoney = function(account , amount , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_remmoney2' , ressourcename) , true))
     end
     
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.removeAccountMoney(account, tonumber(amount))
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.RemoveMoney(account, tonumber(amount))
+    else
+        xPlayer.removeAccountMoney(account, tonumber(amount))
+    end
 
     if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
@@ -401,9 +525,26 @@ MCD.AddMoney = function(account , amount , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_addmoney2' , ressourcename) , true))
     end
 
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.addAccountMoney(account, tonumber(amount))
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.AddMoney(account, tonumber(amount))
+    else
+        xPlayer.addAccountMoney(account, tonumber(amount))
+    end
 
     if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
@@ -429,11 +570,31 @@ MCD.RemoveLicense = function(license , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_remlicense' , ressourcename) , true))
     end
 
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    local identifier
+    if QBCore then
+        identifier = xPlayer.PlayerData.citizenid
+    else
+        identifier = xPlayer.identifier
+    end
+    
     MySQL.Async.execute('DELETE FROM user_licenses  WHERE type = @type and owner = @owner', {
         ['@type'] = license,
-        ['@owner'] = xPlayer.identifier,
+        ['@owner'] = identifier,
     })
     
     lastlicense = MCD.GetCurrentTime()
@@ -457,11 +618,32 @@ MCD.AddLicense = function(license , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_addlicense' , ressourcename) , true))
     end
 
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    local identifier
+    if QBCore then
+        identifier = xPlayer.PlayerData.citizenid
+    else
+        identifier = xPlayer.identifier
+    end
+
+
     MySQL.Async.insert('INSERT INTO `user_licenses`(`type`, `owner`) VALUES (@type,@owner)', {
         ['@type'] = license,
-        ['@owner'] = xPlayer.identifier,
+        ['@owner'] = identifier,
     }, function(result)end)
 
     lastlicense = MCD.GetCurrentTime()
@@ -491,9 +673,26 @@ MCD.RemoveItem = function(item , count , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_remitem2' , ressourcename) , true))
     end
 
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.removeInventoryItem(item, count)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.RemoveItem(item, count)
+    else
+        xPlayer.removeInventoryItem(item, count)
+    end
 
     if count > 0 then
         lastitem = MCD.GetCurrentTime()
@@ -525,9 +724,26 @@ MCD.AddItem = function(item , count , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_additem2' , ressourcename) , true))
     end
 
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.addInventoryItem(item, count)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.AddItem(item, count)
+    else
+        xPlayer.addInventoryItem(item, count)
+    end
 
     if count > 0 then
         lastitem = MCD.GetCurrentTime()
@@ -564,10 +780,7 @@ MCD.RemoveVehicle = function(plate , resname)
     if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
         ressourcename = resname
     end
-    
-    if Config.MCDPlateSafe then
-        plate = plate:gsub(' ' , '_')
-    end
+
     local msg = _U('error')
     local r = false
     if RemovePlate(plate) then
@@ -586,9 +799,27 @@ MCD.SetJob = function(Job , Grade , player , resname)
     end
     
     local _source = player    
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.setJob(Job, Grade)
+
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.SetJob(Job, Grade)
+    else
+        xPlayer.setJob(Job, Grade)
+    end
 
     lastjob = MCD.GetCurrentTime()
     table.insert(joblog , {
@@ -600,29 +831,16 @@ MCD.SetJob = function(Job , Grade , player , resname)
 end
 
 function RemovePlate(plate)
-    if Config.MCDPlateSafe then
-        plate = plate:gsub(' ' , '_')
-    end
-
+    local mcd_plate = MCD.Function.CleanPlate(plate , true)
     local ret = nil
-    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate ', {['@plate']=plate:gsub('% ' , '')}, function(doesexist)
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate ', {['@plate']=mcd_plate}, function(doesexist)
         if #doesexist == 1 then
             MySQL.Async.execute('DELETE FROM owned_vehicles  WHERE plate = @plate', {
-                ['@plate'] = plate:gsub('% ' , ''),
+                ['@plate'] = mcd_plate,
             })
             ret = true
         else
-            MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate ', {['@plate']=plate}, function(doesexist)
-                if #doesexist == 1 then
-                    MySQL.Async.execute('DELETE FROM owned_vehicles  WHERE plate = @plate', {
-                        ['@plate'] = plate,
-                    })
-                    ret = true
-                else
-                    print("Plate Doesn´t Exsists:" .. plate..'|')
-                    ret = false
-                end
-            end)
+            print("Plate Doesn´t Exsists:" .. MCD.Function.CleanPlate(plate , false)..'|')
         end
     end)
     while ret == nil do Citizen.Wait(10) end
@@ -656,15 +874,35 @@ MCD.SetCoords = function(coords , withvehicle ,  playerId)
 end
 
 MCD.SetPlate = function(vehicle , plate)
-    MCD.TriggerClientEvent('mcd_lib:Client:SetPlate' , -1 , vehicle , string.upper(plate))
+    MCD.TriggerClientEvent('mcd_lib:Client:SetPlate' , -1 , vehicle , MCD.Function.CleanPlate(plate , false))
 end
 
 MCD.IsAllowed = function(playerid, lowestgroup)
-    local xPlayer = ESX.GetPlayerFromId(playerid)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(playerid)
+    else
+        xPlayer = ESX.GetPlayerFromId(playerid)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(playerid)
+        else
+            xPlayer = ESX.GetPlayerFromId(playerid)
+        end
+        Citizen.Wait(5)
+    end
+
     local PlayerGroup = -1
     local MinGroup = -1
-    local PlyGroup = xPlayer.getGroup()
+    local PlyGroup
+
+    if QBCore then
+        PlyGroup = xPlayer.Functions.GetPermission()
+    else
+        PlyGroup = xPlayer.getGroup()
+    end
+
     for i,p in ipairs(Config.ServerGroups) do
         if PlyGroup == p then
             PlayerGroup = i
@@ -737,22 +975,42 @@ MCD.IsMuted = function(playersrc)
 end
 
 MCD.HasJob = function(id , Jobs)
-    local xPlayer = ESX.GetPlayerFromId(id)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(id)
+    else
+        xPlayer = ESX.GetPlayerFromId(id)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(id)
+        else
+            xPlayer = ESX.GetPlayerFromId(id)
+        end
+        Citizen.Wait(5)
+    end
 
-    local jname = xPlayer.job.name
-    local jgrade = xPlayer.job.grade
+    local jname
+    local jgrade
+
+    if QBCore then
+        jname = xPlayer.PlayerData.job.name 
+        jgrade = 0
+    else
+        jname = xPlayer.job.name
+        jgrade = xPlayer.job.grade
+    end
 
     if Jobs == 'string' then
         OldFunction('HasJob')
-        local job = xPlayer.job.name
         if type(Jobs) ~= 'string' then
             for i,jobname in ipairs(Jobs) do
-                if jobname == job then
+                if jobname == jname then
                     return true
                 end
             end
         else
-            if Jobs == job then
+            if Jobs == jname then
                 return true
             end
         end
@@ -971,36 +1229,78 @@ MCD.SetMoney = function(account , amount , player ,  resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_setmoney2' , ressourcename) , true))
     end
     
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.setAccountMoney(account, tonumber(amount))
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.SetMoney(account, tonumber(amount))
+    else
+        xPlayer.setAccountMoney(account, tonumber(amount))
+    end
+
     if amount > 0 then
         lastmoney = MCD.GetCurrentTime()
         moneymsg = moneymsg .. '\n' .. _U('Webhook_money_set' , amount , MCD.Function.RemoveColors(GetPlayerName(source)) , ressourcename)
     end
 end
 
-MCD.AddVehicle = function(plate , model , plyid , resname)
+MCD.AddVehicle = function(plate , vehicledata , plyid , cartype , resname)
     local ressourcename = GetInvokingResource()
     if ressourcename == 'mcd_lib' or ressourcename == 'monitor' or ressourcename == nil then
         ressourcename = resname
     end
     
-    local mcdplate = plate
-    if Config.MCDPlateSafe then
-        mcdplate = plate:gsub(' ' , '_')
-    end
-
     local r , finish = false , false
     local _source = source
     local msg = _U('error')
     
-    if plate and model then
-        local xPlayer = ESX.GetPlayerFromId(plyid)        
-        MySQL.Async.execute('INSERT INTO owned_vehicles (owner, plate, vehicle ) VALUES (@owner, @plate, @vehicle)', {
-            ['@owner']   = xPlayer.identifier,
-            ['@plate']   = mcdplate,
-            ['@vehicle'] = json.encode({model = model, plate = plate})
+    if plate and vehicledata then
+        local xPlayer
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(plyid)
+        else
+            xPlayer = ESX.GetPlayerFromId(plyid)
+        end
+        while xPlayer == nil do 
+            if QBCore then
+                xPlayer = QBCore.Functions.GetPlayer(plyid)
+            else
+                xPlayer = ESX.GetPlayerFromId(plyid)
+            end
+            Citizen.Wait(5)
+        end
+    
+        local identifier
+        if QBCore then
+            identifier = xPlayer.PlayerData.citizenid
+        else
+            identifier = xPlayer.identifier
+        end
+
+        if type(vehicledata) == 'string' then
+            vehicledata = {
+                model = vehicledata,
+                plate = MCD.Function.CleanPlate(plate , false)
+            }
+        end
+
+        MySQL.Async.execute('INSERT INTO owned_vehicles (owner, plate, vehicle , type) VALUES (@owner, @plate, @vehicle, @type)', {
+            ['@owner']   = identifier,
+            ['@plate']   = MCD.Function.CleanPlate(plate , true),
+            ['@vehicle'] = json.encode(vehicledata),
+            ['@type'] = cartype or 'car'
         }, function(rowsChanged)
             if tonumber(rowsChanged) == 1 then
                 r = true
@@ -1009,7 +1309,7 @@ MCD.AddVehicle = function(plate , model , plyid , resname)
             finish = true
         end)
         while not finish do Citizen.Wait(1) end
-        MCD.SendToDiscord(_U('add_vehice', plate, msg ,_source) , ressourcename , 'default')
+        MCD.SendToDiscord(_U('add_vehice', MCD.Function.CleanPlate(plate , false), msg ,_source) , ressourcename , 'default')
         return r
     else
         return false
@@ -1113,9 +1413,26 @@ MCD.RemoveWeapon = function(weapon ,player, resname)
     local _source = player
     weapon = string.upper(weapon)
     
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.removeWeapon(weapon)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.RemoveItem(weapon)
+    else
+        xPlayer.removeWeapon(weapon)
+    end
     
     lastweapon = MCD.GetCurrentTime()
     table.insert(weaponlog , {
@@ -1141,9 +1458,27 @@ MCD.AddWeapon = function(weapon , ammo , player , resname)
         print(MCD.Function.ConvertPrint(_U('error').._U('error_addweapon2' , ressourcename) , true))
     end
     
-    local xPlayer = ESX.GetPlayerFromId(_source)
-    while xPlayer == nil do xPlayer = ESX.GetPlayerFromId(_source) Citizen.Wait(5) end
-    xPlayer.addWeapon(weapon, ammo)
+    local xPlayer
+    if QBCore then
+        xPlayer = QBCore.Functions.GetPlayer(_source)
+    else
+        xPlayer = ESX.GetPlayerFromId(_source)
+    end
+    while xPlayer == nil do 
+        if QBCore then
+            xPlayer = QBCore.Functions.GetPlayer(_source)
+        else
+            xPlayer = ESX.GetPlayerFromId(_source)
+        end
+        Citizen.Wait(5)
+    end
+
+    if QBCore then
+        xPlayer.Functions.AddItem(weapon)
+        ammo = 1
+    else
+        xPlayer.addWeapon(weapon, ammo)
+    end    
     
     if ammo > 0 then
         lastweapon = MCD.GetCurrentTime()
@@ -1176,7 +1511,7 @@ MCD.RegisterPriceChange = function(name , min , max , stepmin, stepmax)
     if not found then
         local minimum = math.floor(min*100)
         local maximum = math.floor(max*100)
-        local price = ESX.Math.Round(math.random(minimum , maximum)/100, 1)
+        local price = MCD.Math.Round(math.random(minimum , maximum)/100, 1)        
         table.insert(Prices , {
             name = name, 
             min = min,
@@ -1233,7 +1568,7 @@ MCD.ForcePriceChange = function(name)
 
         local minimum = math.floor(p.stepmin*100)
         local maximum = math.floor(p.stepmax*100)
-        local step = ESX.Math.Round(math.random(minimum , maximum)/100, 1)        
+        local step = MCD.Math.Round(math.random(minimum , maximum)/100, 1)
 
         local newprice = 0
         if minus then
@@ -1271,3 +1606,68 @@ MCD.SingleDimension = function(player)
     dimensions[#dimensions+1] = true
     SetPlayerRoutingBucket(player, #dimensions)
 end
+
+MCD.IsPlateTaken = function(plate)
+    local res = {}
+    local finished = false
+
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate', {
+        ['@plate'] = MCD.Function.CleanPlate(plate , true)
+    }, function(result)
+        finished = true
+        res = #result > 0
+    end)
+
+    while not finished do Citizen.Wait(5) end
+    return res
+end
+
+Citizen.CreateThread(function()
+    Citizen.Wait(5000)
+    local finished = false
+    local converted = 0
+
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles', {}, function(result)
+        for i,p in ipairs(result) do
+            if Config.MCDPlateSafe then
+                if string.find(p.plate , '%s') and not string.find(p.plate , '_') then
+                    local data = json.decode(p.vehicle)
+                    if data.plate then
+                        data.plate = MCD.Function.CleanPlate(data.plate , false)
+                    end
+    
+                    converted = converted + 1
+                    MySQL.Async.execute('UPDATE owned_vehicles SET plate = @newplate , vehicle = @vehicledata WHERE plate = @plate', {
+                        ['@newplate'] = MCD.Function.CleanPlate(p.plate , true),
+                        ['@plate'] = p.plate,
+                        ['@vehicledata'] = json.encode(data)
+                    })
+                end
+            else
+                if string.find(p.plate , '_') then
+                    local data = json.decode(p.vehicle)
+                    if data.plate then
+                        data.plate = MCD.Function.CleanPlate(data.plate , false)
+                    end
+    
+                    converted = converted + 1
+                    MySQL.Async.execute('UPDATE owned_vehicles SET plate = @newplate , vehicle = @vehicledata WHERE plate = @plate', {
+                        ['@newplate'] = p.plate:gsub('_' , ' '),
+                        ['@plate'] = p.plate,
+                        ['@vehicledata'] = json.encode(data)
+                    })
+                end
+            end
+        end
+        finished = true
+    end)
+
+    while not finished do Citizen.Wait(1) end
+    if converted > 0 then
+        if Config.MCDPlateSafe then
+            print(MCD.Function.ConvertPrint(_U('info')..' Converted ~p~'..converted..'~s~ Plates to ~y~MCD_Platesafe'))
+        else
+            print(MCD.Function.ConvertPrint(_U('info')..' Converted ~p~'..converted..'~s~ Plates to ~y~Normal'))
+        end
+    end
+end)

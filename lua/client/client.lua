@@ -30,10 +30,17 @@ MCD.Event = function(eventname)
         Config.Key =  'MCD_Loves_U:ashgdfiawmnbjn124bnkfilajn3jJHnfvlkasefLHFhJsoikgfhJfbnAJFbfasdkjgf3786SGFVJKH'
     end
     
-    ESX.TriggerServerCallback(Config.Key, function(event) 
-        ret = event
-        finished = true
-    end, eventname)
+    if QBCore then
+        QBCore.Functions.TriggerCallback(Config.Key, function(event) 
+            ret = event
+            finished = true
+        end, eventname)
+    else
+        ESX.TriggerServerCallback(Config.Key, function(event) 
+            ret = event
+            finished = true
+        end, eventname)
+    end
     
     while not finished do Citizen.Wait(1) end
 
@@ -120,14 +127,14 @@ MCD.GetNearbyVehicles = function(coords ,  distance , onlyowned)
 			if name == 'NULL' then
 				name = model
 			end
-            table.insert(vehicles , {name = name , plate = string.upper(GetVehicleNumberPlateText(vehicle)) , owner = false , vehicle = vehicle})
+            table.insert(vehicles , {name = name , plate = MCD.Function.CleanPlate(GetVehicleNumberPlateText(vehicle) , false) , owner = false , vehicle = vehicle})
         end
     end
 
     local ownedvehicles = {}
     for i,p in ipairs(vehicles) do
         for a,k in ipairs(MCD.GetOwnedVehicles()) do
-            if p.plate:gsub("% ", "") == k.plate:gsub("% ", "") then
+            if MCD.Function.CleanPlate(p.plate , true) == MCD.Function.CleanPlate(k.plate , true) then
                 p.owner = true
                 table.insert(ownedvehicles , p)
             end
@@ -523,11 +530,26 @@ end
 
 MCD.PlayAnimation = function(animDictionary , animationName , ShowProp , Prophash , BoneIndex , PropPlacement)
     local playerPed = PlayerPedId()
-    if IsEntityPlayingAnim(playerPed, animDictionary, animationName , 3) ~= 1 then
-        ESX.Streaming.RequestAnimDict(animDictionary, function()
-            TaskPlayAnim(playerPed, animDictionary, animationName, 8.0, -8, -1, 49, 0.0, false, false, false)
-        end)
+    local isscenario = not string.find(animDictionary , '@')
+
+    if not isscenario then
+        if IsEntityPlayingAnim(playerPed, animDictionary, animationName , 3) ~= 1 then
+            if QBCore then
+                RequestAnimDict(animDictionary)
+                while not HasAnimDictLoaded(animDictionary) do Citizen.Wait(1) end
+                TaskPlayAnim(playerPed, animDictionary, animationName, 8.0, -8, -1, 49, 0.0, false, false, false)
+            else
+                ESX.Streaming.RequestAnimDict(animDictionary, function()
+                    TaskPlayAnim(playerPed, animDictionary, animationName, 8.0, -8, -1, 49, 0.0, false, false, false)
+                end)
+            end
+        end
+    else
+        if not IsPedUsingScenario(playerPed, animDictionary) then
+            TaskStartScenarioInPlace(playerPed, animDictionary, 0, true)
+        end        
     end
+    
     if ShowProp then
         if Cache.AnimationProp == nil then
             Cache.PropData = {
@@ -574,7 +596,7 @@ Citizen.CreateThread(function()
 end)
 
 MCD.SetPlate = function(vehicle , plate)
-    MCD.TriggerServerEvent('mcd_lib:Server:SetPlate' , MCD.ToHash(vehicle) , MCD.ToHash(string.upper(plate)))
+    MCD.TriggerServerEvent('mcd_lib:Server:SetPlate' , MCD.ToHash(vehicle) , MCD.ToHash(plate))
 end
 
 MCD.GetRPName = function(target)
@@ -703,11 +725,16 @@ MCD.CreatBlipEntity = function(entity , sprite , size , color , name, alpha , fl
 end
 
 MCD.IsPlateTaken = function(plate)
-    if Config.MCDPlateSafe then
-        plate = plate:gsub(' ' , '_')
-    end
+    local finished = false
+    local ret
 
-    return false
+    MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:IsPlateTaken'), function(taken) 
+        ret = taken
+        finished = true
+    end , plate)
+
+    while not finished do Citizen.Wait(1) end
+    return ret
 end
 
 MCD.GeneratePlate = function(PlateLetters , PlateNumbers , PlateUseSpace)
@@ -831,7 +858,7 @@ end
 MCD.HasItem = function(data , old)
     if type(data) == 'string' then
         OldFunction('HasItem')
-        local item = data
+        local item = string.upper(data)
         local count = old
         if not Config.OxInventory then
             for name,count in pairs(MCD.GetPlayerData().inventory) do
@@ -845,7 +872,7 @@ MCD.HasItem = function(data , old)
             end
         else
             for i,p in ipairs(MCD.GetPlayerData().inventory) do
-                local name = p.name
+                local name = string.upper(p.name)
                 local count = p.count
                 if name == item then
                     if count then
@@ -861,23 +888,31 @@ MCD.HasItem = function(data , old)
         for a,b in ipairs(data) do
             if not Config.OxInventory then
                 for name,count in pairs(MCD.GetPlayerData().inventory) do
-                    if name == b.item then
+                    if string.upper(name) == string.upper(b.item) then
                         if b.count then
-                            return count >= b.count
+                            if count >= b.count then
+                                return true
+                            end
                         else
-                            return count > 0
+                            if count > 0 then
+                                return true
+                            end
                         end
                     end
                 end
             else
                 for i,p in ipairs(MCD.GetPlayerData().inventory) do
-                    local name = p.name
+                    local name = string.upper(p.name)
                     local count = p.count
-                    if name == b.item then
+                    if name == string.upper(b.item) then
                         if b.count then
-                            return count >= b.count
+                            if count >= b.count then
+                                return true
+                            end
                         else
-                            return count > 0
+                            if count > 0 then
+                                return true
+                            end
                         end
                     end
                 end
@@ -1097,30 +1132,51 @@ end
 MCD.CanCarry = function(data , old)
     if type(data) == 'string' then
         OldFunction('CanCarry')
+
         local item = data
         local count = old
+
+        if Config.OxInventory then
+            local PlayerWeight = exports.ox_inventory:GetPlayerWeight()
+            local MaxWeight = ESX.GetConfig().MaxWeight*1000
+            local itemweight = exports.ox_inventory:Items()[item].weight*count
+           
+            return (PlayerWeight + itemweight) < MaxWeight
+        else
+            local ret
+            local finished = false
+            
+            MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld'), function(can) 
+                ret = can
+                finished = true
+            end , item , count)
         
-        local ret
-        local finished = false
-        
-        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarryOld'), function(can) 
-            ret = can
-            finished = true
-        end , item , count)
-    
-        while not finished do Citizen.Wait(1) end
-        return ret
+            while not finished do Citizen.Wait(1) end
+            return ret
+        end
     else
-        local ret
-        local finished = false
+        if Config.OxInventory then
+            local PlayerWeight = exports.ox_inventory:GetPlayerWeight()
+            local MaxWeight = ESX.GetConfig().MaxWeight*1000
+
+            local itemweight = 0
+            for i,p in ipairs(data) do
+                itemweight = itemweight + (exports.ox_inventory:Items()[p.item].weight*p.count)
+            end
+            
+            return (PlayerWeight + itemweight) < MaxWeight
+        else
+            local ret
+            local finished = false
+            
+            MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarry'), function(can) 
+                ret = can
+                finished = true
+            end , data)
         
-        MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:CanCarry'), function(can) 
-            ret = can
-            finished = true
-        end , data)
-    
-        while not finished do Citizen.Wait(1) end
-        return ret
+            while not finished do Citizen.Wait(1) end
+            return ret
+        end
     end
 end
 
@@ -1153,30 +1209,45 @@ MCD.IsControlPressed = function(control)
 end
 
 MCD.HasWeapon = function(weapons)
-    local loadout = MCD.GetPlayerData().loadout
-    local hasweapon = false
-    if type(weapons) == 'string' or type(weapons) == 'number' then
-        local hash = weapons
-        if type(weapons) == 'string' then hash = GetHashKey(weapons) end
-        for i,p in ipairs(loadout) do
-            if GetHashKey(p.name) == hash then
-                hasweapon = true
-                break
+    if Config.OxInventory then
+        local itemtable = {}
+        if type(weapons) == 'string' then
+            itemtable = weapons
+        else
+            for i,weapon in pairs(weapons) do
+                table.insert(itemtable , {
+                    item = weapon
+                })
             end
         end
+        return MCD.HasItem(itemtable)
     else
-        for i,weapon in pairs(weapons) do
-            local hash = weapon
-            if type(weapon) == 'string' then hash = GetHashKey(weapon) end
+        local loadout = MCD.GetPlayerData().loadout
+        local hasweapon = false
+    
+        if type(weapons) == 'string' or type(weapons) == 'number' then
+            local hash = weapons
+            if type(weapons) == 'string' then hash = GetHashKey(weapons) end
             for i,p in ipairs(loadout) do
                 if GetHashKey(p.name) == hash then
                     hasweapon = true
                     break
                 end
             end
+        else
+            for i,weapon in pairs(weapons) do
+                local hash = weapon
+                if type(weapon) == 'string' then hash = GetHashKey(weapon) end
+                for i,p in ipairs(loadout) do
+                    if GetHashKey(p.name) == hash then
+                        hasweapon = true
+                        break
+                    end
+                end
+            end
         end
+        return hasweapon
     end
-    return hasweapon
 end
 
 Citizen.CreateThread(function()

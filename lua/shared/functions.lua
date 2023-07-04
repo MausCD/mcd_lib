@@ -139,9 +139,9 @@ MCD.Function.ConvertMoney = function(money)
     end
     local currency = '$'
     if Config.UseEuro then currency = '€' end
-    local ret = ESX.Math.Round(money, 3)..currency
+    local ret = MCD.Math.Round(money, 3)..currency
     for i,p in ipairs(moneycfg) do
-        if money >= p.val then ret = ESX.Math.Round(tonumber(money)/p.val, 2)..p.txt..currency end 
+        if money >= p.val then ret = MCD.Math.Round(tonumber(money)/p.val, 2)..p.txt..currency end 
     end
     return ret
 end
@@ -162,7 +162,7 @@ MCD.ToHash = function(string)
     end)..({ '', '==', '=' })[#string%3+1])
 end
 
-MCD.ReadHash = function(hash)
+MCD.ReadHash = function(hash)    
     if not hash then return nil end
     local data = string.gsub(hash, '[^'..key..'=]', '')
     return (data:gsub('.', function(x)
@@ -199,3 +199,12 @@ Citizen.CreateThread(function()
         end)
     end
 end)
+
+MCD.Function.CleanPlate = function(plate , convert)
+    plate = string.gsub(plate, "^%s*(.-)%s*$", "%1")
+    plate = string.upper(plate)
+    if convert and Config.MCDPlateSafe then
+        plate = string.gsub(plate, "%s", "_")
+    end
+    return plate
+end

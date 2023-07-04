@@ -1,2 +1,1 @@
-savedtables = {
-}
+savedtables = {}

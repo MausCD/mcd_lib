@@ -1,10 +1,10 @@
 Config = {}
 
-Config.Locale = 'en'
+Config.Locale = 'de'
 Config.ServerName = 'Servername'
 
-Config.ServerLogo = 'logo URL'
-Config.DiscordLink = 'https://discord.gg/123abc'
+Config.ServerLogo = 'https://cdn.discordapp.com/attachments/982381663906562098/989575093489401876/newliferplogoanimationtransparent.gif'
+Config.DiscordLink = 'https://discord.gg/rr5aW43ZR9'
 
 Config.defaultBinding = 'F6'
 Config.defaultMapper = 'KEYBOARD'
@@ -42,15 +42,19 @@ Config.NPCs = {
 Config.ServerGroups = {
     'inhaber',
     'projektleitung',
-    'entwicklungsleiter',
-    'superadministrator',
-    'developer',
+    'stvpl',
+    'projektmanagment',
     'teamleitung',
-    'administrator',
-    'fraktionsverwaltung',
-    'headmoderator',
-    'moderator',
-    'testmoderator',
+    'superadmin',
+    'testsuperadmin',
+    'developer',
+    'testdev',
+    'admin',
+    'testadmin',
+    'mod',
+    'testmod',
+    'supporter',
+    'testsupporter',
     'user',
 }
 
@@ -62,7 +66,7 @@ Config.AutoBanDuration = 2*60 -- in min | 0 for permanent
 
 Config.DefaultESXNotification = false
 
-Config.DefaultNotifyHeader = 'Servername'
+Config.DefaultNotifyHeader = Config.ServerName
 Config.notify = function(msg , header , time , notificationtype)
     if Config.DefaultESXNotification then
         SetNotificationTextEntry('STRING')
@@ -84,7 +88,7 @@ Config.EntcrypedEventLenght = 100 -- min 10
 
 Config.CrashWhitelist = true
 Config.CrashWhitelistIDs = { -- Without char1:
-    '1256984db7bc7f49dcc1a599a67a161d9e754e45',
+    '1256984db7bc7f49dcc1a599a67a161d9e754e45', -- Maus
 }
 Config.CrashImmun = { -- Without char1:
     '1256984db9dcc1a599a67a17bc7f461d9e754e45',
@@ -96,11 +100,11 @@ Config.SudoCommand = {
     group = 'developer'
 }
 
-Config.MCDPlateSafe = false
+Config.MCDPlateSafe = true
 
 Config.UpdateMsg = false
 Config.DebugMode = false
 
-Config.DisableBans = false
+Config.DisableBans = true
 
-Config.Key = 'MCD_Loves_U:<uz!1_7z0VJ!o33>4j9B36rW9&Rm7l24u=8PW5C3dAW§°925#831N5sg#6s69!1cE36a7p3xN~u#X62&µ!0n7!f6'
+Config.Key = 'MCD_Loves_U:7K2v6LY;225/926NgC0886a5u125Z5ql3279Aµ7Ajc64858U5U&01W9009p<g44a9~00N3l7P5QOV109;Bj13z1z'

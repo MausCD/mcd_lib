@@ -1,3 +1,4 @@
+QBCore = nil
 MCD = {}
 AddEventHandler('mcd_lib:getSharedObject', function(cb)
 	cb(MCD)
@@ -106,49 +107,70 @@ end
 itemnames = {}
 licensenames = {}
 Citizen.CreateThread(function()
-	if not os then
-		MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(items) 
-			itemnames = items
-		end)
-		MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(licenses) 
-			licensenames = licenses
-		end)
-	else
-		local finished = {
-			items = false,
-			license = false
-		}
-		
-		MySQL.Async.fetchAll('SELECT * FROM items ', {}, function(result)
-			for i,p in ipairs(result) do
-				itemnames[p.name] = p.label
-			end
-			finished.items = true
-		end)
-		MySQL.Async.fetchAll('SELECT * FROM licenses ', {}, function(result)
-			for i,p in ipairs(result) do
-				licensenames[p.type] = p.label
-			end
-			finished.license = true
-		end)
-		
-		ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(src , cb)
-			while not finished.items do Citizen.Wait(1) end
-			cb(itemnames)
-		end)
-		ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(src , cb)
-			while not finished.items do Citizen.Wait(1) end
-			cb(licensenames)
-		end)
-	end
+    if not Config.OxInventory then
+        if not os then
+            MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(items) 
+                itemnames = items
+            end)
+            MCD.TriggerServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(licenses) 
+                licensenames = licenses
+            end)
+        else
+            local finished = {
+                items = false,
+                license = false
+            }
+            
+            MySQL.Async.fetchAll('SELECT * FROM items ', {}, function(result)
+                for i,p in ipairs(result) do
+                    itemnames[p.name] = p.label
+                end
+                finished.items = true
+            end)
+            MySQL.Async.fetchAll('SELECT * FROM licenses ', {}, function(result)
+                for i,p in ipairs(result) do
+                    licensenames[p.type] = p.label
+                end
+                finished.license = true
+            end)
+            
+            if QBCore then
+                QBCore.Functions.CreateCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(src , cb)
+                    while not finished.items do Citizen.Wait(1) end
+                    cb(itemnames)
+                end)
+                QBCore.Functions.CreateCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(src , cb)
+                    while not finished.items do Citizen.Wait(1) end
+                    cb(licensenames)
+                end)
+            else
+                ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetItemNames'), function(src , cb)
+                    while not finished.items do Citizen.Wait(1) end
+                    cb(itemnames)
+                end)
+                ESX.RegisterServerCallback(MCD.Event('mcd_lib:Server:GetLicenseNames'), function(src , cb)
+                    while not finished.items do Citizen.Wait(1) end
+                    cb(licensenames)
+                end)
+            end
+        end
+    end
 end)
 
 MCD.ItemName = function(item)
-    local name = itemnames[item]
-    if not name then
-        name = 'Item Name doesnt exist for ' .. item
+    if Config.OxInventory then
+        local name = exports.ox_inventory:Items()[item].label
+        if not name then
+            name = 'Item name for '..item..' does not exist'
+        end
+        return name
+    else
+        local name = itemnames[item]
+        if not name then
+            name = 'Item name for '..item..' does not exist'
+        end
+        return name
     end
-    return name
 end
 
 MCD.LiceneName = function(item)
@@ -160,28 +182,52 @@ MCD.LiceneName = function(item)
 end
 
 MCD.WeaponName = function(weapon)
+    if QBCore then
+        return 'Doesnt work with QBCore'
+    end
     if string.find(weapon, "weapon_") then
-        return ESX.GetWeaponLabel(string.upper(weapon))
+        if Config.OxInventory then
+            return MCD.ItemName(weapon)
+        else
+            return ESX.GetWeaponLabel(string.upper(weapon))
+        end
     else
-        return ESX.GetWeaponLabel(string.upper('WEAPON_'..weapon))
+        if Config.OxInventory then
+            return MCD.ItemName('WEAPON_'..weapon)
+        else
+            return ESX.GetWeaponLabel(string.upper('WEAPON_'..weapon))
+        end
     end
 end
 
 MCD.Debug = function(msg)
+    local res = GetInvokingResource()
 	if not msg then msg = 'no message specified' end
+    if not res then res = 'mcd_lib' end
+    msg = msg:gsub('~s~' , '~p~')
+
 	local num = math.random(1000,9999)
 	local text = '[~b~'..num..'~s~][~y~'..GetInvokingResource()..'~s~] ~p~' .. msg
     print(MCD.Function.ConvertPrint(text))
 end
 
 MCD.DrawError = function(msg)
+    local res = GetInvokingResource()
 	if not msg then msg = 'no message specified' end
-	local text = '[~y~'..GetInvokingResource()..'~s~][~o~ERROR~s~] ~r~' .. msg
+    if not res then res = 'mcd_lib' end
+    msg = msg:gsub('~s~' , '~r~')
+
+	local text = '[~y~'..res..'~s~][~o~ERROR~s~] ~r~' .. msg
     print(MCD.Function.ConvertPrint(text))
 end
+
 MCD.DrawInfo = function(msg)
+    local res = GetInvokingResource()
 	if not msg then msg = 'no message specified' end
-	local text = '[~y~'..GetInvokingResource()..'~s~][~b~INFO~s~] ~g~' .. msg
+    if not res then res = 'mcd_lib' end
+    msg = msg:gsub('~s~' , '~g~')
+
+	local text = '[~y~'..res..'~s~][~b~INFO~s~] ~g~' .. msg
     print(MCD.Function.ConvertPrint(text))
 end
 
@@ -257,11 +303,11 @@ MCD.BenchmarkFunction = function(func , fast , superfast)
     end
     ms = math.floor(ms)
     local run = MCD.Math.TimeDifference(start , MCD.GetCurrentTime())
-    local runtime =  ESX.Math.Round(run , 1)..'s'
+    local runtime =  MCD.Math.Round(run , 1)..'s'
    
     MCD.DrawInfo('The Function Took in average ' .. ms .. 'ms and the proccess ' .. runtime)
     if fast then
-        MCD.DrawInfo('With no Function Delay it would only took ' .. ESX.Math.Round(((run*1000)-chilltime)/1000 , 1)..'seconds')
+        MCD.DrawInfo('With no Function Delay it would only took ' .. MCD.Math.Round(((run*1000)-chilltime)/1000 , 1)..'seconds')
     end
 end
 
@@ -273,6 +319,10 @@ Citizen.CreateThread(function()
     
 	if GetResourceState('okokBilling') ~= 'missing' then
 		Config.UsingOkokBilling = true
+	end
+
+	if GetResourceState('qb-core') ~= 'missing' then
+        QBCore = exports['qb-core']:GetCoreObject()
 	end
 end)
 

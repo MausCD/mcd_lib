@@ -109,6 +109,9 @@ end
 
 MCD.AddUpdateChecker = function(scriptname)
     local ressourcename = GetInvokingResource()
+    if not ressourcename then
+        ressourcename = GetCurrentResourceName()
+    end
     if scriptname and ressourcename then
         if GetResourceState(ressourcename) ~= 'missing' and GetResourceState(ressourcename) ~= 'unknown' then
             local found = false
@@ -138,7 +141,7 @@ MCD.Authenticate = function(scriptname)
 end
 
 Citizen.CreateThread(function() 
-    MCD.AddUpdateChecker('mcd_lib', GetCurrentResourceName())   
+    MCD.AddUpdateChecker('mcd_lib')   
     Citizen.Wait(5*1000)
     CheckForUpdates()
     firstmsg = true

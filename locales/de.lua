@@ -20,6 +20,7 @@ Locales['de'] = {
 
 	['setjob'] = 'Job von ~y~%s~s~ auf ~g~%s~s~ gesetzt. (ServerId: ~b~%s~s~).',	
 	
+	['locale_digit_grouping_symbol'] = ' ',
 	
 	['error'] = '~s~[~o~ERROR~s~]',	
 	['info'] = '~s~[~b~INFO~s~]',	
